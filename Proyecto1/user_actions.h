@@ -1,4 +1,5 @@
-#include <cstdint>
+#include <stdint.h>
+
 typedef struct{
     bool available;
     char user[13];

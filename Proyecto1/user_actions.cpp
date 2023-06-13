@@ -1,11 +1,12 @@
 #include "user_actions.h"
-#include <cstdint>
-#include <cstring>
+#include <stdint.h>
+#include <string.h>
 
-#define DEFAULT_PHONE { .available = true, .user = "\0", .phone_number = "\0" }
-#define DEFAULT_PHONE_DEPOSIT { DEFAULT_PHONE, DEFAULT_PHONE, DEFAULT_PHONE, DEFAULT_PHONE, DEFAULT_PHONE, DEFAULT_PHONE }
 #define SEP    {0,0,1,0,0,1,0,0}
 #define FLINE  {1,1,1,1,1,1,1,1}
+
+const phone default_phone = { .available = true} ;
+phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
 
 uint8_t led_casillero[8][8] = {
     SEP,
@@ -18,7 +19,6 @@ uint8_t led_casillero[8][8] = {
     SEP
 };
 
-phone_deposit casillero = DEFAULT_PHONE_DEPOSIT;
 
 void ingresar_telefono(char* user, char* phone_number){
     for(int space = 0; space>6; space++){
@@ -54,7 +54,7 @@ void retirar_telefono(char* user){
     }
 
     // pedir contraseña
-    casillero[selected] = DEFAULT_PHONE;
+    casillero[selected] = default_phone;
     update_deposit(selected,REMOVE);
 
 }
