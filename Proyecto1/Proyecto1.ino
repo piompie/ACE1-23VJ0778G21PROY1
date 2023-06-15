@@ -340,34 +340,34 @@ bool find_user(char* user){
 }
 
 bool pedir_password(){
-    pantalla.clear();
-    pantalla.setCursor(0, 0);
-    pantalla.println("password:");
-    char buffer[20] = {0};
-    bool input  = keyboard_input(buffer);
-    if(!input){
-        return false;
+    char buffer[16] = {0};
+    while(true){
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.println("password:");
+        bool input  = keyboard_input(buffer,1);
+        if(input){ break; }
+        memset(buffer,'\0',sizeof(buffer));
     }
     Serial.println(buffer);
     pantalla.clear();
     // validar_credenciale()
     return true;
 }
-/*
 
-char teclas[4][3] = { { '1', '2', '3' },
-                      { '4', '5', '6' },
-                      { '7', '8', '9' },
-                      { '*', '0', '#' } };
+/*
+* Utiliza el teclado matricial para llenar un arreglo de caracteres.
+* Retorn true si el usuario da a aceptar, false si da a cancelar
 */
-bool keyboard_input(char* buffer){
-    pantalla.setCursor(0, 1);
+#define KEYBOARD_DELAY 100
+bool keyboard_input(char* buffer,uint8_t line){
+    pantalla.setCursor(0, line);
     uint8_t key_pos = 0;
     uint8_t buffer_index = 0;
     for(;;){
         pantalla.setCursor(0, 1);
         char key = leerTecla();
-        delay(100);
+        delay(KEYBOARD_DELAY);
         uint8_t key_index;
         bool next =  false; 
         bool prev = false;
@@ -422,13 +422,13 @@ bool keyboard_input(char* buffer){
 
                 if (digitalRead(2) == HIGH) { // botón aceptar 
                     Serial.println("aceptar");
-                    delay(100);
+                    delay(KEYBOARD_DELAY);
                     return true;
                 }
 
                 if(digitalRead(3) == HIGH){ // botón cancelar
                     Serial.println("cancelar");
-                    delay(100);
+                    delay(KEYBOARD_DELAY);
                     return false;
                 }
                 continue;
