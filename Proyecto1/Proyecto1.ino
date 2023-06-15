@@ -42,6 +42,13 @@ typedef enum{
     DEPOSIT
 }operation;
 
+typedef enum{
+    APP_INPUT,
+    KB_INPUT
+}input_type;
+
+input_type tipoEntrada;
+
 #define MAX_USER_N 10
 
 #define EEPROM_USERS_START 0
@@ -60,13 +67,16 @@ void update_deposit(uint8_t pos, operation op);
 bool agregar_usuario(char* username, char* password, char* phone_number);
 void eliminar_cuenta(char* user);
 bool validar_credenciales(char* user, char* pass);
+boolean iniciar_sesion(char* user, char* pass);
 bool find_user(char* user);
 bool pedir_password();
 char* xor_encode(char* input);
 char* xor_decode(char* input);
+void tipo_de_input();
 
 const phone default_phone = { .available = true} ;
 phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
+struct usuario current_user = {"\0", "\0","\0"};
 
 uint8_t led_casillero[8][8] = {
     SEP,
@@ -91,6 +101,29 @@ char teclado_matricial[9][5] = {
     {'9','W','X','Y','Z'}
 };
 
+
+void tipo_de_input(){
+    pantalla.clear();
+    pantalla.setCursor(0, 0);
+    pantalla.println("TIPO DE INPUT:");
+    pantalla.setCursor(0, 1);
+    pantalla.println("# APLICACION");
+    pantalla.setCursor(0, 2);
+    pantalla.println("* TECLADO");
+    while(true){
+        char seleccion = leerTecla();; 
+        delay(100);
+        if (seleccion == '*'){
+            tipoEntrada = KB_INPUT; 
+            break;
+        }else if(seleccion == '#'){
+            tipoEntrada = APP_INPUT;
+            break;
+        }
+
+    }
+    pantalla.clear();
+}
 
 void ingresar_telefono(char* user, char* phone_number){
     for(int space = 0; space>6; space++){
@@ -339,19 +372,67 @@ bool find_user(char* user){
     return false;
 }
 
+/*
+* Le pide la contraseña al usuario para hacer verificaciones
+* La entrada se hace con el teclado
+*/
 bool pedir_password(){
+    tipo_de_input();
     char buffer[16] = {0};
     while(true){
         pantalla.clear();
         pantalla.setCursor(0, 0);
         pantalla.println("password:");
-        bool input  = keyboard_input(buffer,1);
+        bool input;
+        if (tipoEntrada == KB_INPUT){ input  = keyboard_input(buffer,1); }
+        if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password"); }
         if(input){ break; }
     }
     Serial.println(buffer);
     pantalla.clear();
-    // validar_credenciale()
+    bool cred = validar_credenciales(current_user.nombre,buffer);
+    if(!cred){
+        for(uint8_t i = 0; buffer[i]!='\0';i++){buffer[i]='\0';}
+        while(true){
+            pantalla.clear();
+            pantalla.setCursor(0, 0);
+            pantalla.println("error password:");
+            bool input;
+            if (tipoEntrada == KB_INPUT){input  = keyboard_input(buffer,1); }
+            if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password"); }
+            if(input){ break; }
+        }
+    }
     return true;
+}
+
+void pruebaInput(){
+    tipo_de_input();
+    char buffer[16] = {0};
+    while(true){
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.println("texto:");
+        bool input;
+        if (tipoEntrada == KB_INPUT){ input  = keyboard_input(buffer,1); }
+        if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"texto"); }
+        if(input){ break; }
+    }
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.println("texto:");
+        pantalla.setCursor(0, 3);
+        pantalla.println(buffer);
+        delay(3000);
+}
+
+boolean iniciar_sesion(char* user, char* pass){
+    if (validar_credenciales(user,pass)){
+        strncpy(current_user.nombre,user,12);
+        strncpy(current_user.contra,pass,12);
+        return true;
+    }
+    return false;
 }
 
 /*
@@ -451,6 +532,29 @@ bool keyboard_input(char* buffer,uint8_t line){
     return false;
 }
 
+bool bluetooth_input(char* buffer,char* message){
+    bool seEnvioAlgo = false;
+    int indiceBuffer = 0;
+    long int t0 = millis();
+    long int t1 = millis();
+    limpiarBuffer();
+	enviarConfirmar(message);
+    while(true){
+        while (Serial.available()) {
+            seEnvioAlgo = true;
+            buffer[indiceBuffer++] = Serial.read();
+        }
+        if (seEnvioAlgo) {
+            t1 = millis();
+            if (t1 - t0 >= 500) break;
+        } else {
+            t0 = millis();
+            t1 = millis();
+        }
+    }
+    return true;
+}
+
 /************************************************************* 
 **************************************************************
 *************************************************************/
@@ -544,7 +648,8 @@ void setup() {
 
     EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
     agregar_usuario("admin1","1234","1234"); 
-    //pedir_password();
+    pruebaInput();
+    //pedir_password_kb();
     /*
     agregar_usuario("xxxx2","1234","1234"); 
     agregar_usuario("a1312n3","1234","1234"); 
