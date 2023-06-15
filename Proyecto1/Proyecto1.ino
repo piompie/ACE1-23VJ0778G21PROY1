@@ -358,6 +358,7 @@ bool pedir_password(){
 /*
 * Utiliza el teclado matricial para llenar un arreglo de caracteres.
 * Retorn true si el usuario da a aceptar, false si da a cancelar
+* El parametro line determina la línea en la que se mostrará el input
 */
 #define KEYBOARD_DELAY 100
 bool keyboard_input(char* buffer,uint8_t line){
@@ -365,7 +366,7 @@ bool keyboard_input(char* buffer,uint8_t line){
     uint8_t key_pos = 0;
     uint8_t buffer_index = 0;
     for(;;){
-        pantalla.setCursor(0, 1);
+        pantalla.setCursor(0, line);
         char key = leerTecla();
         delay(KEYBOARD_DELAY);
         uint8_t key_index;
