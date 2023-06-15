@@ -38,6 +38,7 @@ enum estados {
   LOGS,
   APLICACION,
   SESION,
+  SESIONADMIN,
   PANEL
 } siguiente_estado,
   estado_actual = MENU;
@@ -92,6 +93,26 @@ void setup() {
   pantalla.setCursor(0, 0);
   pantalla.println("Sebas 202111835");
   delay(500);
+  
+  //borrarEEPROM();
+
+  EEPROM.begin();
+
+  // Crear una instancia de la estructura usuario
+  usuario user;
+
+  // Asignar los valores deseados
+  strcpy(user.nombre, "admin1");
+  strcpy(user.contra, "1234");
+  strcpy(user.numero, "1234");
+
+  EEPROM.put(1000, user);
+  // Finalizar la escritura en la memoria EEPROM
+  EEPROM.end();
+
+
+
+
 }
 
 boolean entradaAceptada() {
@@ -317,14 +338,78 @@ void loop() {
 	        siguiente_direccion += sizeof(struct usuario);
 	    }
 	    pantalla.clear();
-	    if (encontrado) pantalla.print("ENCONTRADO");
-	    else pantalla.print("NO ENCONTRADO");
-      delay(50);
-	    estado_actual = SESION;
+
+
+      if(strcmp(nombre_temp, "admin1") == 0 && strcmp(contra_temp, "1234") == 0){
+        pantalla.print("ADMIN");
+        delay(50);
+        estado_actual = SESIONADMIN;
+      }else if(encontrado == true){
+        estado_actual = SESION;
+      }else{
+        pantalla.print(nombre_temp);
+        pantalla.print(contra_temp);
+        delay(50);
+        estado_actual = MENU;
+        
+      }
+	    
 	    delay(2000);
             break;
         break;
       }
+      case SESIONADMIN:
+    {
+      pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.print("Presiona aceptar");
+        pantalla.setCursor(0, 1);
+        pantalla.print("  Accion ADMIN");
+        pantalla.setCursor(0, 2);
+        pantalla.print("  Accion ADMIN2");
+        pantalla.setCursor(0, 3);
+        pantalla.print("  Cerrar sesion");
+        pantalla.setCursor(0, opcion_menu + 1);
+        pantalla.print(">");
+        while (true) { //loop que mueve el cursor o detecta el boton aceptar
+          char tecla = leerTecla();
+          if (tecla == '2') {
+            delay(210);
+            opcion_menu--;
+            if (opcion_menu > 254) opcion_menu = 0;  //254 porque la variable es byte xd
+            break;
+          }
+          if (tecla == '8') {
+            delay(210);
+            opcion_menu++;
+            if (opcion_menu > 2) opcion_menu = 2;
+            break;
+          }
+          if (digitalRead(2) == HIGH) {  //boton aceptar
+            delay(210);
+            switch (opcion_menu) {
+              case 0:
+                //estado_actual = ESPERANDO;
+                //siguiente_estado = APLICACION;
+                
+                break;
+              case 1:
+                //estado_actual = ESPERANDO;
+                //siguiente_estado = REGISTRO;
+                
+                break;
+              case 2:
+                //estado_actual = ESPERANDO;
+                //siguiente_estado = REGISTRO;
+                estado_actual = MENU;
+                break;
+            }
+            opcion_menu = 0;
+            break;
+          }
+        }
+        break;
+    }
     case SESION:
     {
       pantalla.clear();
