@@ -347,7 +347,6 @@ bool pedir_password(){
         pantalla.println("password:");
         bool input  = keyboard_input(buffer,1);
         if(input){ break; }
-        memset(buffer,'\0',sizeof(buffer));
     }
     Serial.println(buffer);
     pantalla.clear();
@@ -429,6 +428,7 @@ bool keyboard_input(char* buffer,uint8_t line){
 
                 if(digitalRead(3) == HIGH){ // botón cancelar
                     Serial.println("cancelar");
+                    for(uint8_t i = 0; buffer[i]!='\0';i++){buffer[i]='\0';}
                     delay(KEYBOARD_DELAY);
                     return false;
                 }
