@@ -1,6 +1,7 @@
 /*
   *Cambien su carnet en las lineas 58-60
 */
+
 #include <EEPROM.h>
 #include <LiquidCrystal.h>
 #include "LedControl.h"
@@ -19,11 +20,309 @@ char letras[] = "ABCDEFGHIJKL";
 LiquidCrystal pantalla = LiquidCrystal(22, 23, 24, 25, 26, 27);
 LedControl matriz = LedControl(28, 30, 29, 1);
 
+/************************************************************ 
+*                 ACCIONES DE USUARIO                        *
+*************************************************************/
+typedef struct{
+    bool available;
+    char user[13];
+    char phone_number[9];
+}phone;
+
+typedef phone phone_deposit[6];
+
 struct usuario {
-    char nombre[11];
-    char contra[11];
+    char nombre[13];
+    char contra[13];
     char numero[9] ;
 };
+
+typedef enum{
+    REMOVE,
+    DEPOSIT
+}operation;
+
+#define MAX_USER_N 10
+
+#define EEPROM_USERS_START 0
+#define EEPROM_LOGS_START sizeof(struct usuario)*MAX_USER_N
+
+#define LLAVE1 'x'
+#define LLAVE2 'y'
+
+#define SEP    {0,0,1,0,0,1,0,0}
+#define FLINE  {1,1,1,1,1,1,1,1}
+
+
+void ingresar_telefono(char* user, char* phone_number);
+void retirar_telefono(char* user);
+void eliminar_cuenta(char* user);
+void update_deposit(uint8_t pos, operation op);
+char* xor_encode(char* input);
+char* xor_decode(char* input);
+bool agregar_usuario(char* username, char* password, char* phone_number);
+
+const phone default_phone = { .available = true} ;
+phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
+
+uint8_t led_casillero[8][8] = {
+    SEP,
+    SEP,
+    FLINE,
+    SEP,
+    SEP,
+    FLINE,
+    SEP,
+    SEP
+};
+
+
+void ingresar_telefono(char* user, char* phone_number){
+    for(int space = 0; space>6; space++){
+        if( casillero[space].available ){
+            //pedir contraseña
+            casillero[space].available = false;
+            strncpy(casillero[space].user,user,12);
+            strncpy(casillero[space].phone_number,phone_number,8); 
+            update_deposit(space,DEPOSIT);
+        } 
+    }
+}
+
+void retirar_telefono(char* user){
+    uint8_t user_phone[6] = {0,0,0,0,0,0};
+    uint8_t phone_count = 0;
+
+    for(int space = 0; space>6; space++){
+        if( !casillero[space].available && strncmp(user,casillero[space].user,12) == 0){
+            user_phone[space] = space;
+            phone_count++;
+        }
+    }
+    if (phone_count == 0){
+        return;
+    }
+
+    uint8_t selected = 0;
+    if (phone_count > 1){
+        // Pedirle selección de telefono al usuario, si tiene más de uno
+    }else{
+        selected = user_phone[0];
+    }
+
+    // pedir contraseña
+    casillero[selected] = default_phone;
+    update_deposit(selected,REMOVE);
+
+}
+
+void eliminar_cuenta(char* user){
+
+    if(!find_user(user)){
+        Serial.println("El usuario no existe");
+        return;
+    }
+    for(int space = 0; space>6; space++){
+        if( !casillero[space].available && strncmp(user,casillero[space].user,12) == 0){
+            // No se puede eliminar la cuenta si tiene dispositivos en el casillero
+            // Mandar al menú de retiro
+            return;
+        }
+    }
+    // ¿ No pide contraseña para eliminar la cuenta ? 
+    // eliminar usuario de la EEPROM
+    uint16_t pos;
+    struct usuario load;
+    char* enc_usr = xor_encode(user);
+    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+        EEPROM.get(pos,load);
+        if(strcmp(load.nombre,enc_usr) == 0){
+            for(uint8_t pos_user=0; pos_user < sizeof(struct usuario); pos_user++){
+                EEPROM.put(pos+pos_user,'\0');
+            }
+            Serial.println("Usuario Borrado");
+            free(enc_usr);
+            return;
+        }
+    }
+    free(enc_usr);
+    //no se borró
+}
+
+bool validar_credenciales(char* user, char* pass){
+    uint16_t pos;
+    struct usuario load;
+    char* enc_usr = xor_encode(user);
+    char* enc_pass = xor_encode(pass);
+    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+        EEPROM.get(pos,load);
+        if(strcmp(load.nombre,enc_usr) == 0 && strcmp(load.contra,enc_pass)){
+            free(enc_usr);
+            free(enc_pass);
+            return true;
+        }
+    }
+    free(enc_usr);
+    free(enc_pass);
+    return false;
+}
+
+/*
+* Actualiza la matriz del depósito de telefonos
+*/ 
+void update_deposit(uint8_t pos, operation op){
+    uint8_t x_left,y_top;
+    switch(pos){
+        case 0:
+            x_left = 0;
+            y_top = 0;
+            break;
+        case 1:
+            x_left = 3;
+            y_top = 0;
+            break;
+        case 2:
+            x_left = 6;
+            y_top = 0;
+            break;
+        case 3:
+            x_left = 0;
+            y_top = 4;
+            break;
+        case 4: 
+            x_left = 3;
+            y_top = 4;
+            break;
+        case 5:
+            x_left = 6;
+            y_top = 4;
+            break;
+        case 6:
+            x_left = 0;
+            y_top = 6;
+            break;
+        case 7:
+            x_left = 3;
+            y_top = 6;
+            break;
+        case 8:
+            x_left = 6;
+            y_top = 6;
+            break;
+    }
+
+    if( op == DEPOSIT ){
+        led_casillero[x_left][y_top]    = 1;
+        led_casillero[x_left+1][y_top]  = 1;
+        led_casillero[x_left][y_top+1]  = 1;
+        led_casillero[x_left][y_top+1]  = 1;
+    }else{ //REMOVE
+        led_casillero[x_left][y_top]    = 0;
+        led_casillero[x_left+1][y_top]  = 0;
+        led_casillero[x_left][y_top+1]  = 0;
+        led_casillero[x_left][y_top+1]  = 0; 
+    }
+
+    // dibujar la matriz
+}
+
+/*
+* Cifrado XOR, usando las 2 llaves 
+*/
+char* xor_encode(char* input){
+    char keys[2] = {LLAVE1,LLAVE2}; // Falta definir cual es la llave de verdad, ver enunciado xd
+    uint8_t len = strlen(input);
+    char* ret = (char*)malloc(sizeof(char)*len);
+    strncpy(ret,input,len);
+    for(uint8_t key = 0; key < 2; key++ ){
+        for(uint8_t i = 0; i<len; i++){
+            ret[i] = ret[i] ^ keys[key];
+        }
+    }
+    return ret;
+}
+
+
+/*
+* Descifrado XOR, usando las 2 llaves
+*/
+char* xor_decode(char* input){
+    char keys[2] = {LLAVE2,LLAVE1};
+    uint8_t len = strlen(input);
+    char* ret = (char*)malloc(sizeof(char)*len);
+    strncpy(ret,input,len);
+    for(uint8_t key = 0; key < 2; key++ ){
+        for(uint8_t i = 0; i<len; i++){
+            ret[i] = ret[i] ^ keys[key];
+        }
+    }
+    return ret;
+}
+
+
+/*
+* Agrega un usuario a la eeprom, retorna false si ya existe un usuario con ese nombre 
+* No evalua si la memoria está llena
+*/
+bool agregar_usuario(char* username, char* password, char* phone_number){
+    if(find_user(username)){
+        Serial.println("El usuario ya existe");
+        return false;
+    }
+    struct usuario new_user;
+    char* enc_usr = xor_encode(username);
+    char* enc_pass = xor_encode(password);
+    uint16_t pos;
+    struct usuario load;
+    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+        EEPROM.get(pos,load);
+        if(EEPROM.read(pos) == '\0'){
+            break;
+        }
+    }
+
+    strncpy(new_user.nombre,enc_usr,12);
+    strncpy(new_user.contra,enc_pass,12);
+    strncpy(new_user.numero,phone_number,8);
+    EEPROM.put(pos,new_user);
+
+    struct usuario check;
+    EEPROM.get(pos+sizeof(struct usuario),check);
+    if(!find_user(xor_decode(check.nombre)) || pos + sizeof(struct usuario) < EEPROM_LOGS_START ){
+        // Colocar un \0 para marcar que hay un espacio vacio contiguo
+        // sólo si no hay otro registro de usuario o si está en la última posición
+        EEPROM.put(pos+sizeof(struct usuario),'\0');
+    }
+    Serial.println("---Nuevo usuario---");
+    Serial.print(enc_usr);
+    Serial.print(" ");
+    Serial.print(enc_pass);
+    Serial.print(" ");
+    Serial.print(phone_number);
+    Serial.println("");
+    Serial.println("-------------------");
+    free(enc_usr);
+    free(enc_pass);
+    return true;
+}
+    
+bool find_user(char* user){
+    uint16_t pos;
+    struct usuario load;
+    char* enc_usr = xor_encode(user);
+    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+        EEPROM.get(pos,load);
+        if(strncmp(load.nombre,enc_usr,12) == 0 ){
+            free(enc_usr);
+            return true;
+        }
+    }
+    free(enc_usr);
+    return false;
+}
+/************************************************************* 
+**************************************************************
+*************************************************************/
 
 void borrarEEPROM() {
     for (int i = 0; i < EEPROM.length(); i++)
@@ -43,8 +342,8 @@ enum estados {
 } siguiente_estado,
   estado_actual = MENU;
 byte opcion_menu = 0;
-char nombre_temp[11];
-char contra_temp[11];
+char nombre_temp[13];
+char contra_temp[13];
 char numero_temp[9] ;
 
 char leerTecla() {
@@ -87,13 +386,14 @@ void setup() {
   pantalla.setCursor(0, 2);
   pantalla.println("Pedro 202111835");
   pantalla.setCursor(0, 3);
-  pantalla.println("Jose 202111835");
+  pantalla.println("Jose 201901756");
   delay(500);
   pantalla.clear();
   pantalla.setCursor(0, 0);
   pantalla.println("Sebas 202111835");
   delay(500);
   
+  /*
   //borrarEEPROM();
 
   EEPROM.begin();
@@ -109,9 +409,20 @@ void setup() {
   EEPROM.put(1000, user);
   // Finalizar la escritura en la memoria EEPROM
   EEPROM.end();
+  */
 
-
-
+    EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
+    agregar_usuario("admin1","1234","1234"); 
+    /*
+    agregar_usuario("xxxx2","1234","1234"); 
+    agregar_usuario("a1312n3","1234","1234"); 
+    agregar_usuario("asda4","1234","1234"); 
+    eliminar_cuenta("xxxx2");
+    agregar_usuario("a1312n3","1234","1234"); 
+    agregar_usuario("asda4","1234","1234"); 
+    agregar_usuario("ping","1234","1234"); 
+    agregar_usuario("ping","1234","1234"); 
+    */
 
 }
 
@@ -324,6 +635,7 @@ void loop() {
             }
 	    enviarConfirmar("NADA");
 	    // LEER EEPROM
+        /*
 	    byte usuarios = 0;
 	    EEPROM.get(0, usuarios);
 	    int siguiente_direccion = OFFSET_USUARIOS;
@@ -337,6 +649,8 @@ void loop() {
 		}
 	        siguiente_direccion += sizeof(struct usuario);
 	    }
+        */
+        bool encontrado = validar_credenciales(nombre_temp,contra_temp);
 	    pantalla.clear();
 
 
@@ -517,14 +831,14 @@ void loop() {
       case APLICACION:
       {
         
-            memset(nombre_temp, 0, 11);    
-            memset(contra_temp, 0, 11);    
+            memset(nombre_temp, 0, 13);    
+            memset(contra_temp, 0, 13);    
             memset(numero_temp, 0,  9);    
             struct usuario nuevo_usuario;
 	    LOOP {
 	        limpiarBuffer();
 	        enviarConfirmar("Nombre:");
-            	memset(nombre_temp, 0, 11);    
+            	memset(nombre_temp, 0, 13);    
                 pantalla.clear();
                 pantalla.print("R E G I S T R O");
                 pantalla.setCursor(0, 1);
@@ -606,7 +920,7 @@ void loop() {
 	    LOOP {
 	        limpiarBuffer();
 	        enviarConfirmar("Contras:");
-            	memset(contra_temp, 0, 11);    
+            	memset(contra_temp, 0, 13);    
                 pantalla.clear();
                 pantalla.print("R E G I S T R O");
                 pantalla.setCursor(0, 1);
@@ -646,9 +960,10 @@ void loop() {
             }
 	    enviarConfirmar("NADA");
 	    //
-	    memcpy(nuevo_usuario.nombre, nombre_temp, 11);
+        /*
+	    memcpy(nuevo_usuario.nombre, nombre_temp, 13);
 	    memcpy(nuevo_usuario.numero, numero_temp, 9);
-	    memcpy(nuevo_usuario.contra, contra_temp, 11);
+	    memcpy(nuevo_usuario.contra, contra_temp, 13);
 	    // LEER EEPROM
 	    byte usuarios = 0;
 	    EEPROM.get(0, usuarios);
@@ -663,6 +978,10 @@ void loop() {
             estado_actual = REGISTRO;
 	    pantalla.clear();
             break;      
+        */
+        
+        // true -> creado , false -> no creado
+        bool usuario_creado = agregar_usuario(nombre_temp,numero_temp,contra_temp);
       }
   }
 }
