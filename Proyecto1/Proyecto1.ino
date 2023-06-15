@@ -56,11 +56,14 @@ typedef enum{
 
 void ingresar_telefono(char* user, char* phone_number);
 void retirar_telefono(char* user);
-void eliminar_cuenta(char* user);
 void update_deposit(uint8_t pos, operation op);
+bool agregar_usuario(char* username, char* password, char* phone_number);
+void eliminar_cuenta(char* user);
+bool validar_credenciales(char* user, char* pass);
+bool find_user(char* user);
+bool pedir_password();
 char* xor_encode(char* input);
 char* xor_decode(char* input);
-bool agregar_usuario(char* username, char* password, char* phone_number);
 
 const phone default_phone = { .available = true} ;
 phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
@@ -74,6 +77,18 @@ uint8_t led_casillero[8][8] = {
     FLINE,
     SEP,
     SEP
+};
+
+char teclado_matricial[9][5] = {
+    {'1','*','$','#','!'},
+    {'2','A','B','C','\0'},
+    {'3','D','E','F','\0'},
+    {'4','G','H','I','\0'},
+    {'5','J','K','L','\0'},
+    {'6','M','N','O','\0'},
+    {'7','P','Q','R','S'},
+    {'8','T','U','V','\0'},
+    {'9','W','X','Y','Z'}
 };
 
 
@@ -306,6 +321,9 @@ bool agregar_usuario(char* username, char* password, char* phone_number){
     return true;
 }
     
+/*
+* Verifica la existencia de un usuario en la EEPROM
+*/
 bool find_user(char* user){
     uint16_t pos;
     struct usuario load;
@@ -320,6 +338,118 @@ bool find_user(char* user){
     free(enc_usr);
     return false;
 }
+
+bool pedir_password(){
+    char buffer[16] = {0};
+    while(true){
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.println("password:");
+        bool input  = keyboard_input(buffer,1);
+        if(input){ break; }
+        memset(buffer,'\0',sizeof(buffer));
+    }
+    Serial.println(buffer);
+    pantalla.clear();
+    // validar_credenciale()
+    return true;
+}
+
+/*
+* Utiliza el teclado matricial para llenar un arreglo de caracteres.
+* Retorn true si el usuario da a aceptar, false si da a cancelar
+*/
+#define KEYBOARD_DELAY 100
+bool keyboard_input(char* buffer,uint8_t line){
+    pantalla.setCursor(0, line);
+    uint8_t key_pos = 0;
+    uint8_t buffer_index = 0;
+    for(;;){
+        pantalla.setCursor(0, 1);
+        char key = leerTecla();
+        delay(KEYBOARD_DELAY);
+        uint8_t key_index;
+        bool next =  false; 
+        bool prev = false;
+        switch(key){
+            case '1':
+                key_index = 0;
+                key_pos = 0;
+                break;
+            case '2':
+                key_index = 1;
+                key_pos = 0;
+                break;
+            case '3':
+                key_index = 2;
+                key_pos = 0;
+                break;
+            case '4':
+                key_index = 3;
+                key_pos = 0;
+                break;
+            case '5':
+                key_index = 4;
+                key_pos = 0;
+                break;
+            case '6':
+                key_index = 5;
+                key_pos = 0;
+                break;
+            case '7':
+                key_index = 6;
+                key_pos = 0;
+                break;
+            case '8':
+                key_index = 7;
+                key_pos = 0;
+                break;
+            case '9':
+                key_index = 8;
+                key_pos = 0;
+                break;
+            case '*':
+                prev = true;
+                break;
+            case '#':
+                next = true;
+                break;
+            case '0':
+                buffer_index++;
+                continue;
+                break;
+            default:
+
+                if (digitalRead(2) == HIGH) { // botón aceptar 
+                    Serial.println("aceptar");
+                    delay(KEYBOARD_DELAY);
+                    return true;
+                }
+
+                if(digitalRead(3) == HIGH){ // botón cancelar
+                    Serial.println("cancelar");
+                    delay(KEYBOARD_DELAY);
+                    return false;
+                }
+                continue;
+                break;
+        }
+
+        if(next){
+            key_pos = ( key_pos == 4 || teclado_matricial[key_index][key_pos + 1 ] == '\0' ) ? 0 : key_pos + 1;
+        }else if(prev){
+            key_pos = ( key_pos == 0 ) ? 4 : key_pos - 1;
+            if(key_pos == 4 && teclado_matricial[key_index][key_pos] == '\0'){
+                key_pos--;
+            }
+        }
+        buffer[buffer_index] = teclado_matricial[key_index][key_pos];
+        pantalla.println(buffer);
+        Serial.println(buffer);
+    }
+    return false;
+}
+
 /************************************************************* 
 **************************************************************
 *************************************************************/
@@ -413,6 +543,7 @@ void setup() {
 
     EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
     agregar_usuario("admin1","1234","1234"); 
+    //pedir_password();
     /*
     agregar_usuario("xxxx2","1234","1234"); 
     agregar_usuario("a1312n3","1234","1234"); 
