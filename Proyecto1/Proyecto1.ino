@@ -46,7 +46,7 @@ typedef struct{
     char phone_number[9];
 }phone;
 
-typedef phone phone_deposit[6];
+typedef phone phone_deposit[9];
 
 struct usuario {
     char nombre[13];
@@ -77,12 +77,14 @@ input_type tipoEntrada;
 #define SEP    {0,0,1,0,0,1,0,0}
 #define FLINE  {1,1,1,1,1,1,1,1}
 
+#define KEYBOARD_DELAY 75
+
 
 void ingresar_telefono(char* user, char* phone_number);
 void retirar_telefono(char* user);
 void update_deposit(uint8_t pos, operation op);
 bool agregar_usuario(char* username, char* password, char* phone_number);
-void eliminar_cuenta(char* user);
+bool eliminar_cuenta(char* user);
 bool validar_credenciales(char* user, char* pass);
 boolean iniciar_sesion(char* user, char* pass);
 bool find_user(char* user);
@@ -92,8 +94,7 @@ char* xor_decode(char* input);
 void tipo_de_input();
 
 const phone default_phone = { .available = true} ;
-phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
-struct usuario current_user = {"\0", "\0","\0"};
+phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
 
 uint8_t led_casillero[8][8] = {
     SEP,
@@ -108,7 +109,7 @@ uint8_t led_casillero[8][8] = {
 
 char teclado_matricial[9][5] = {
     {'1','*','$','#','!'},
-    {'2','A','B','C','\0'},
+    {'2','A','B','C','0'}, // La tecla 0 se utiliza para otra función, por eso aparece el 0 aquí.
     {'3','D','E','F','\0'},
     {'4','G','H','I','\0'},
     {'5','J','K','L','\0'},
@@ -128,8 +129,8 @@ void tipo_de_input(){
     pantalla.setCursor(0, 2);
     pantalla.println("* TECLADO");
     while(true){
-        char seleccion = leerTecla();; 
-        delay(100);
+        char seleccion = leerTecla(); 
+        delay(KEYBOARD_DELAY);
         if (seleccion == '*'){
             tipoEntrada = KB_INPUT; 
             break;
@@ -143,22 +144,25 @@ void tipo_de_input(){
 }
 
 void ingresar_telefono(char* user, char* phone_number){
-    for(int space = 0; space>6; space++){
+    //realizar comprobacion de las condciones del casillero 
+    for(int space = 0; space<9; space++){
         if( casillero[space].available ){
             //pedir contraseña
+            if(!pedir_password()){return;} 
             casillero[space].available = false;
             strncpy(casillero[space].user,user,12);
             strncpy(casillero[space].phone_number,phone_number,8); 
             update_deposit(space,DEPOSIT);
+            break;
         } 
     }
 }
 
 void retirar_telefono(char* user){
-    uint8_t user_phone[6] = {0,0,0,0,0,0};
+    uint8_t user_phone[9] = {255,255,255,255,255,255,255,255,255};
     uint8_t phone_count = 0;
 
-    for(int space = 0; space>6; space++){
+    for(uint8_t space = 0; space<9; space++){
         if( !casillero[space].available && strncmp(user,casillero[space].user,12) == 0){
             user_phone[space] = space;
             phone_count++;
@@ -168,30 +172,73 @@ void retirar_telefono(char* user){
         return;
     }
 
-    uint8_t selected = 0;
-    if (phone_count > 1){
-        // Pedirle selección de telefono al usuario, si tiene más de uno
-    }else{
-        selected = user_phone[0];
-    }
+    uint8_t selected = 255;
 
-    // pedir contraseña
+    pantalla.clear();
+    uint8_t line = 0;
+    for(uint8_t p = 0; p<9; p++){
+        if(p == 3  || p == 6){line++; pantalla.setCursor(0,line);};
+        if(user_phone[p] == 255){continue;}
+        char c = user_phone[p] + '0';
+        pantalla.println(c);
+    }
+    line++;
+    pantalla.setCursor(0,line);
+    pantalla.print("Opcion: ");
+    char buf = '\0';
+    while(selected == 255){
+        pantalla.setCursor(7,line);
+        pantalla.print(" ");
+        pantalla.setCursor(7,line);
+        buf = leerTecla();
+        delay(KEYBOARD_DELAY);
+        if (buf == ' ' || buf == '*' || buf == '#'){continue;}
+        pantalla.print(buf);
+        uint8_t index = buf - '0';
+        delay(KEYBOARD_DELAY*2);
+        if(user_phone[index]==255){
+            continue; 
+        }
+        selected = index;
+
+    }
+    if(!pedir_password()){return;} 
+    char sacado = selected + '0';
     casillero[selected] = default_phone;
     update_deposit(selected,REMOVE);
+    pantalla.clear();
+    pantalla.setCursor(0,0);
+    pantalla.print("Sacado #");
+    pantalla.print(sacado);
+    delay(250);
 
 }
 
-void eliminar_cuenta(char* user){
+void render_casillero(){
+    for(uint8_t x = 0; x<9; x++ ){
+        for(uint8_t y = 0 ; y<9;y++){
+            matriz.setLed(0,x,y,led_casillero[x][y]); 
+        }
+    }
+}
+
+bool eliminar_cuenta(char* user){
 
     if(!find_user(user)){
         Serial.println("El usuario no existe");
-        return;
+        return false;
     }
-    for(int space = 0; space>6; space++){
+    for(int space = 0; space<9; space++){
         if( !casillero[space].available && strncmp(user,casillero[space].user,12) == 0){
             // No se puede eliminar la cuenta si tiene dispositivos en el casillero
             // Mandar al menú de retiro
-            return;
+            pantalla.clear();
+            pantalla.setCursor(0,0);
+            pantalla.println("CEL en Sistema");
+            pantalla.println("Menu de retiro...");
+            delay(400);
+            retirar_telefono(user);
+            return false;
         }
     }
     // ¿ No pide contraseña para eliminar la cuenta ? 
@@ -207,11 +254,12 @@ void eliminar_cuenta(char* user){
             }
             Serial.println("Usuario Borrado");
             free(enc_usr);
-            return;
+            return true;
         }
     }
-    free(enc_usr);
     //no se borró
+    free(enc_usr);
+    return false;
 }
 
 bool validar_credenciales(char* user, char* pass){
@@ -252,15 +300,15 @@ void update_deposit(uint8_t pos, operation op){
             break;
         case 3:
             x_left = 0;
-            y_top = 4;
+            y_top = 3;
             break;
         case 4: 
             x_left = 3;
-            y_top = 4;
+            y_top = 3;
             break;
         case 5:
             x_left = 6;
-            y_top = 4;
+            y_top = 3;
             break;
         case 6:
             x_left = 0;
@@ -277,18 +325,19 @@ void update_deposit(uint8_t pos, operation op){
     }
 
     if( op == DEPOSIT ){
-        led_casillero[x_left][y_top]    = 1;
-        led_casillero[x_left+1][y_top]  = 1;
-        led_casillero[x_left][y_top+1]  = 1;
-        led_casillero[x_left][y_top+1]  = 1;
+        led_casillero[y_top][x_left]    = 1;
+        led_casillero[y_top+1][x_left]  = 1;
+        led_casillero[y_top][x_left+1]  = 1;
+        led_casillero[y_top+1][x_left+1]  = 1;
     }else{ //REMOVE
-        led_casillero[x_left][y_top]    = 0;
-        led_casillero[x_left+1][y_top]  = 0;
-        led_casillero[x_left][y_top+1]  = 0;
-        led_casillero[x_left][y_top+1]  = 0; 
+        led_casillero[y_top][x_left]    = 0;
+        led_casillero[y_top+1][x_left]  = 0;
+        led_casillero[y_top][x_left+1]  = 0;
+        led_casillero[y_top+1][x_left+1]  = 0; 
     }
 
     // dibujar la matriz
+    render_casillero();
 }
 
 /*
@@ -407,9 +456,7 @@ bool pedir_password(){
     }
     Serial.println(buffer);
     pantalla.clear();
-    bool cred = validar_credenciales(current_user.nombre,buffer);
-    Serial.print("->");
-    Serial.println(cred);
+    bool cred = validar_credenciales(nombre_temp,buffer);
     if(!cred){
         for(uint8_t i = 0; buffer[i]!='\0';i++){buffer[i]='\0';}
         while(true){
@@ -422,7 +469,7 @@ bool pedir_password(){
             if(input){ break; }
         }
     }
-    cred = validar_credenciales(current_user.nombre,buffer);
+    cred = validar_credenciales(nombre_temp,buffer);
     if(!cred){
         // si falla 2 veces se bloquea 10 segundos y retorna al mensaje inicial 
         estado_actual = MENU;
@@ -460,8 +507,8 @@ void pruebaInput(){
 
 boolean iniciar_sesion(char* user, char* pass){
     if (validar_credenciales(user,pass)){
-        strncpy(current_user.nombre,user,12);
-        strncpy(current_user.contra,pass,12);
+        strncpy(nombre_temp,user,12);
+        strncpy(contra_temp,pass,12);
         return true;
     }
     return false;
@@ -472,7 +519,6 @@ boolean iniciar_sesion(char* user, char* pass){
 * Retorn true si el usuario da a aceptar, false si da a cancelar
 * El parametro line determina la línea en la que se mostrará el input
 */
-#define KEYBOARD_DELAY 100
 bool keyboard_input(char* buffer,uint8_t line){
     pantalla.setCursor(0, line);
     uint8_t key_pos = 0;
@@ -666,13 +712,17 @@ void setup() {
   EEPROM.end();
   */
 
+    render_casillero();
     EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
     agregar_usuario("admin1","1234","1234"); 
+    //agregar_usuario("a","2","2"); 
+    //agregar_usuario("b","1","1"); 
+    //Serial.println(iniciar_sesion("b","1"));
+    //estado_actual = SESION;
     /*
-    agregar_usuario("a","2","2"); 
-    agregar_usuario("b","1","1"); 
-    iniciar_sesion("b","1");
-    pedir_password();*/
+    Serial.println(iniciar_sesion("b","1"));
+    */
+    //pedir_password();
 
 }
 
@@ -978,14 +1028,14 @@ void loop() {
     {
       pantalla.clear();
         pantalla.setCursor(0, 0);
-        pantalla.print("Presiona aceptar");
+        pantalla.print(" Ingreso Cel");
         pantalla.setCursor(0, 1);
-        pantalla.print("  Accion Usuario");
+        pantalla.print(" Retiro Cel");
         pantalla.setCursor(0, 2);
-        pantalla.print("  Accion Usuario2");
+        pantalla.print(" Cerrar sesion");
         pantalla.setCursor(0, 3);
-        pantalla.print("  Cerrar sesion");
-        pantalla.setCursor(0, opcion_menu + 1);
+        pantalla.print(" Eliminar Cuenta");
+        pantalla.setCursor(0, opcion_menu);
         pantalla.print(">");
         while (true) { //loop que mueve el cursor o detecta el boton aceptar
           char tecla = leerTecla();
@@ -998,31 +1048,39 @@ void loop() {
           if (tecla == '8') {
             delay(210);
             opcion_menu++;
-            if (opcion_menu > 2) opcion_menu = 2;
+            if (opcion_menu > 3) opcion_menu = 3;
             break;
           }
-          if (digitalRead(2) == HIGH) {  //boton aceptar
-            delay(210);
-            switch (opcion_menu) {
-              case 0:
+    if (digitalRead(2) == HIGH) {  //boton aceptar
+        delay(210);
+        switch (opcion_menu) {
+            case 0:
                 //estado_actual = ESPERANDO;
                 //siguiente_estado = APLICACION;
-                
+                ingresar_telefono(nombre_temp,""); 
                 break;
-              case 1:
+            case 1:
                 //estado_actual = ESPERANDO;
-                //siguiente_estado = REGISTRO;
-                
+                //siguiente_estado = REGISTRO;  
+                retirar_telefono(nombre_temp);
                 break;
-              case 2:
+            case 2:
                 //estado_actual = ESPERANDO;
                 //siguiente_estado = REGISTRO;
                 estado_actual = MENU;
                 break;
-            }
-            opcion_menu = 0;
-            break;
-          }
+            case 3:
+                if(eliminar_cuenta(nombre_temp)){
+                    estado_actual = MENU;
+                }else{
+                    // menu remover
+                }
+                break;
+
+    }
+    opcion_menu = 0;
+    break;
+  }
         }
         break;
     }
