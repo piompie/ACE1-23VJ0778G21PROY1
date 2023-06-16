@@ -150,8 +150,19 @@ void tipo_de_input(){
 void ingresar_telefono(char* user, char* phone_number){
     //realizar comprobacion de las condciones del casillero 
     for(int space = 0; space<9; space++){
+        pantalla.clear();
+        pantalla.setCursor(0,0);
+        pantalla.println("Intoduzca CEL en");
+        pantalla.setCursor(0,1);
+        pantalla.print(" POS #");
+        char pos  = space + '0';
+        pantalla.print(pos);
         if( casillero[space].available ){
-            //pedir contraseña
+            while(true){
+                if(!check_deposit('B',space) ){ // el botón *está* presionado
+                    break;
+                }
+            }
             if(!pedir_password()){return;} 
             casillero[space].available = false;
             strncpy(casillero[space].user,user,12);
@@ -654,8 +665,11 @@ bool check_deposit(char type, uint8_t position){
     char rsp[2];
     Serial3.print(msg);
     Serial3.readBytes(rsp, 1);
-    Serial.print("->");
-    Serial.println(rsp);
+    if(rsp[0] == '1'){ // si es botón 1 = botón no está presionado, si es sensor de temp 1 = temp alta
+        return true;
+    }else{
+        return false;
+    }
 }
 
 /************************************************************* 
@@ -729,6 +743,12 @@ void setup() {
     }else{
         Serial.println("Hay admin");
     }
+
+    /* //Para no pasar por menus xd 
+    agregar_usuario("a","1","1");
+    iniciar_sesion("a","1");
+    estado_actual = SESION;
+    */
 }
 
 boolean entradaAceptada() {
