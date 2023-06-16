@@ -346,8 +346,8 @@ void update_deposit(uint8_t pos, operation op){
 char* xor_encode(char* input){
     char keys[2] = {LLAVE1,LLAVE2}; // Falta definir cual es la llave de verdad, ver enunciado xd
     uint8_t len = strlen(input);
-    char* ret = (char*)malloc(sizeof(char)*len);
-    strncpy(ret,input,len);
+    char* ret = (char*)malloc(sizeof(char)*13);
+    strncpy(ret,input,12);
     for(uint8_t key = 0; key < 2; key++ ){
         for(uint8_t i = 0; i<len; i++){
             ret[i] = ret[i] ^ keys[key];
@@ -363,8 +363,8 @@ char* xor_encode(char* input){
 char* xor_decode(char* input){
     char keys[2] = {LLAVE2,LLAVE1};
     uint8_t len = strlen(input);
-    char* ret = (char*)malloc(sizeof(char)*len);
-    strncpy(ret,input,len);
+    char* ret = (char*)malloc(sizeof(char)*13);
+    strncpy(ret,input,12);
     for(uint8_t key = 0; key < 2; key++ ){
         for(uint8_t i = 0; i<len; i++){
             ret[i] = ret[i] ^ keys[key];
@@ -395,9 +395,9 @@ bool agregar_usuario(char* username, char* password, char* phone_number){
         }
     }
 
-    strncpy(new_user.nombre,enc_usr,12);
-    strncpy(new_user.contra,enc_pass,12);
-    strncpy(new_user.numero,phone_number,8);
+    strncpy(new_user.nombre,enc_usr,13);
+    strncpy(new_user.contra,enc_pass,13);
+    strncpy(new_user.numero,phone_number,9);
     EEPROM.put(pos,new_user);
 
     struct usuario check;
@@ -429,7 +429,7 @@ bool find_user(char* user){
     char* enc_usr = xor_encode(user);
     for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
         EEPROM.get(pos,load);
-        if(strncmp(load.nombre,enc_usr,12) == 0 ){
+        if(strcmp(load.nombre,enc_usr) == 0 ){
             free(enc_usr);
             return true;
         }
@@ -483,26 +483,6 @@ bool pedir_password(){
         return false;
     }
     return true;
-}
-
-void pruebaInput(){
-    tipo_de_input();
-    char buffer[16] = {0};
-    while(true){
-        pantalla.clear();
-        pantalla.setCursor(0, 0);
-        pantalla.println("texto:");
-        bool input;
-        if (tipoEntrada == KB_INPUT){ input  = keyboard_input(buffer,1); }
-        if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"texto"); }
-        if(input){ break; }
-    }
-        pantalla.clear();
-        pantalla.setCursor(0, 0);
-        pantalla.println("texto:");
-        pantalla.setCursor(0, 3);
-        pantalla.println(buffer);
-        delay(3000);
 }
 
 boolean iniciar_sesion(char* user, char* pass){
@@ -713,8 +693,14 @@ void setup() {
   */
 
     render_casillero();
-    EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
-    agregar_usuario("admin1","1234","1234"); 
+
+    if(!find_user("admin1")){
+        Serial.println("Agregar Admin");
+        EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
+        agregar_usuario("admin1","1234","1234"); 
+    }else{
+        Serial.println("Hay admin");
+    }
     //agregar_usuario("a","2","2"); 
     //agregar_usuario("b","1","1"); 
     //Serial.println(iniciar_sesion("b","1"));
