@@ -729,15 +729,6 @@ void setup() {
     }else{
         Serial.println("Hay admin");
     }
-    agregar_usuario("a1312n3","1234","1234"); 
-    agregar_usuario("asda4","1234","1234"); 
-    agregar_usuario("a1312n3","1234","1234"); 
-    agregar_usuario("xxxx2","1234","1234"); 
-    agregar_usuario("a1312n3","1234","1234"); 
-    agregar_usuario("asda4","1234","1234"); 
-    agregar_usuario("ping","1234","1234"); 
-    agregar_usuario("ping","1234","1234"); 
-    agregar_usuario("lelo","1234","1234");
 }
 
 boolean entradaAceptada() {
