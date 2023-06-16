@@ -77,7 +77,7 @@ input_type tipoEntrada;
 #define SEP    {0,0,1,0,0,1,0,0}
 #define FLINE  {1,1,1,1,1,1,1,1}
 
-#define KEYBOARD_DELAY 75
+#define KEYBOARD_DELAY 100
 
 
 void ingresar_telefono(char* user, char* phone_number);
@@ -448,10 +448,9 @@ bool pedir_password(){
     while(true){
         pantalla.clear();
         pantalla.setCursor(0, 0);
-        pantalla.println("password:");
         bool input;
-        if (tipoEntrada == KB_INPUT){input  = keyboard_input(buffer,1); }
-        if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password"); }
+        if (tipoEntrada == KB_INPUT){pantalla.println("password:"); input  = keyboard_input(buffer,1); } 
+        if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password");}
         if(input){ break; }
     }
     Serial.println(buffer);
@@ -462,10 +461,9 @@ bool pedir_password(){
         while(true){
             pantalla.clear();
             pantalla.setCursor(0, 0);
-            pantalla.println("error password:");
             bool input;
-            if (tipoEntrada == KB_INPUT){input  = keyboard_input(buffer,1); }
-            if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password"); }
+            if (tipoEntrada == KB_INPUT){ pantalla.println("error password:"); input  = keyboard_input(buffer,1); } 
+            if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"error password"); }
             if(input){ break; }
         }
     }
@@ -554,7 +552,9 @@ bool keyboard_input(char* buffer,uint8_t line){
                 next = true;
                 break;
             case '0':
-                buffer_index++;
+                if(buffer[buffer_index]!='\0'){
+                    buffer_index++;
+                }
                 continue;
                 break;
             default:
@@ -590,28 +590,55 @@ bool keyboard_input(char* buffer,uint8_t line){
     return false;
 }
 
-bool bluetooth_input(char* buffer,char* message){
+bool bluetooth_input(char* buffer,char* message){ 
 
-    bool seEnvioAlgo = false;
-    int indiceBuffer = 0;
-    long int t0 = millis();
-    long int t1 = millis();
-    //limpiarBuffer();
-	//enviarConfirmar(message);
-    while(true){
-        while (Serial.available()) {
-            seEnvioAlgo = true;
-            buffer[indiceBuffer++] = Serial.read();
+    limpiarBuffer();
+    pantalla.clear();
+    pantalla.print(" Esperando  una ");
+    pantalla.setCursor(0, 1);
+    pantalla.print("   conexion...  ");
+    bool alguienPorAhi = false;
+    char recibidos[3];
+    while(true) {
+        while(Serial.available()) {
+            Serial.readBytes(recibidos, 2);
+            alguienPorAhi = true;
+            break;
         }
-        if (seEnvioAlgo) {
-            t1 = millis();
-            if (t1 - t0 >= 500) break;
-        } else {
-            t0 = millis();
-            t1 = millis();
-        }
+        if(alguienPorAhi){break;}
     }
-    return true;
+    while(true){
+
+        bool seEnvioAlgo = false;
+        int indiceBuffer = 0;
+        long int t0 = millis();
+        long int t1 = millis();
+        limpiarBuffer();
+        enviarConfirmar(message);
+        pantalla.clear();
+        pantalla.setCursor(0,0);
+        pantalla.println(message);
+        while(true){
+            while (Serial.available()) {
+                seEnvioAlgo = true;
+                buffer[indiceBuffer++] = Serial.read();
+            }
+            if (seEnvioAlgo) {
+                t1 = millis();
+                if (t1 - t0 >= 500) break;
+            } else {
+                t0 = millis();
+                t1 = millis();
+            }
+        }
+        pantalla.setCursor(0,1);
+        pantalla.println(buffer);
+        pantalla.setCursor(0,2);
+        pantalla.print("Aceptar?       ");
+        delay(500);
+        if (entradaAceptada()){return true;}
+        for(uint8_t i = 0; buffer[i]!='\0';i++){buffer[i]='\0';}
+    }
 }
 
 /************************************************************* 
@@ -672,25 +699,8 @@ void setup() {
   for (int i = 8; i <= 10; i++) {
     pinMode(i, OUTPUT);
   }
-  // mensaje inicial
-     mensaje_inicial();
-  /*
-  //borrarEEPROM();
-
-  EEPROM.begin();
-
-  // Crear una instancia de la estructura usuario
-  usuario user;
-
-  // Asignar los valores deseados
-  strcpy(user.nombre, "admin1");
-  strcpy(user.contra, "1234");
-  strcpy(user.numero, "1234");
-
-  EEPROM.put(1000, user);
-  // Finalizar la escritura en la memoria EEPROM
-  EEPROM.end();
-  */
+    // mensaje inicial
+    mensaje_inicial();
 
     render_casillero();
 
@@ -701,14 +711,6 @@ void setup() {
     }else{
         Serial.println("Hay admin");
     }
-    //agregar_usuario("a","2","2"); 
-    //agregar_usuario("b","1","1"); 
-    //Serial.println(iniciar_sesion("b","1"));
-    //estado_actual = SESION;
-    /*
-    Serial.println(iniciar_sesion("b","1"));
-    */
-    //pedir_password();
 
 }
 
@@ -920,22 +922,6 @@ void loop() {
 		pantalla.print(LINEA_VACIA);
             }
 	    enviarConfirmar("NADA");
-	    // LEER EEPROM
-        /*
-	    byte usuarios = 0;
-	    EEPROM.get(0, usuarios);
-	    int siguiente_direccion = OFFSET_USUARIOS;
-	    bool encontrado = false;
-	    for (int i = 0; i < usuarios; i++) {
-	        struct usuario usuario_existente;
-		EEPROM.get(siguiente_direccion, usuario_existente);
-		if (strcmp(nombre_temp, usuario_existente.nombre) == 0 && \
-		    strcmp(contra_temp, usuario_existente.contra) == 0) {
-		    encontrado = true;
-		}
-	        siguiente_direccion += sizeof(struct usuario);
-	    }
-        */
         bool encontrado = validar_credenciales(nombre_temp,contra_temp);
 	    pantalla.clear();
 
@@ -1252,7 +1238,7 @@ void loop() {
 		pantalla.setCursor(0, 3);
 		pantalla.print(LINEA_VACIA);
             }
-	    enviarConfirmar("NADA");
+	    //enviarConfirmar("NADA");
 	    //
         /*
 	    memcpy(nuevo_usuario.nombre, nombre_temp, 13);
@@ -1275,7 +1261,10 @@ void loop() {
         */
         
         // true -> creado , false -> no creado
-        bool usuario_creado = agregar_usuario(nombre_temp,numero_temp,contra_temp);
+        bool usuario_creado = agregar_usuario(nombre_temp,contra_temp,numero_temp);
+        if(usuario_creado){
+            estado_actual = MENU;
+        }
       }
   }
 }
