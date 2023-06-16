@@ -20,6 +20,23 @@ char letras[] = "ABCDEFGHIJKL";
 LiquidCrystal pantalla = LiquidCrystal(22, 23, 24, 25, 26, 27);
 LedControl matriz = LedControl(28, 30, 29, 1);
 
+enum estados {
+  MENU,
+  REGISTRO,
+  ESPERANDO,
+  LOGIN,
+  LOGS,
+  APLICACION,
+  SESION,
+  SESIONADMIN,
+  PANEL
+} siguiente_estado,
+  estado_actual = MENU;
+byte opcion_menu = 0;
+char nombre_temp[13];
+char contra_temp[13];
+char numero_temp[9] ;
+
 /************************************************************ 
 *                 ACCIONES DE USUARIO                        *
 *************************************************************/
@@ -204,7 +221,7 @@ bool validar_credenciales(char* user, char* pass){
     char* enc_pass = xor_encode(pass);
     for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
         EEPROM.get(pos,load);
-        if(strcmp(load.nombre,enc_usr) == 0 && strcmp(load.contra,enc_pass)){
+        if(strcmp(load.nombre,enc_usr) == 0 && strcmp(load.contra,enc_pass) == 0){
             free(enc_usr);
             free(enc_pass);
             return true;
@@ -384,13 +401,15 @@ bool pedir_password(){
         pantalla.setCursor(0, 0);
         pantalla.println("password:");
         bool input;
-        if (tipoEntrada == KB_INPUT){ input  = keyboard_input(buffer,1); }
+        if (tipoEntrada == KB_INPUT){input  = keyboard_input(buffer,1); }
         if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password"); }
         if(input){ break; }
     }
     Serial.println(buffer);
     pantalla.clear();
     bool cred = validar_credenciales(current_user.nombre,buffer);
+    Serial.print("->");
+    Serial.println(cred);
     if(!cred){
         for(uint8_t i = 0; buffer[i]!='\0';i++){buffer[i]='\0';}
         while(true){
@@ -402,6 +421,19 @@ bool pedir_password(){
             if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password"); }
             if(input){ break; }
         }
+    }
+    cred = validar_credenciales(current_user.nombre,buffer);
+    if(!cred){
+        // si falla 2 veces se bloquea 10 segundos y retorna al mensaje inicial 
+        estado_actual = MENU;
+        for(uint8_t i= 10 ;i > 0; i--  ){
+            pantalla.clear();
+            pantalla.setCursor(0,0);
+            pantalla.println(i);
+            delay(1000);
+        }
+        mensaje_inicial();
+        return false;
     }
     return true;
 }
@@ -533,12 +565,13 @@ bool keyboard_input(char* buffer,uint8_t line){
 }
 
 bool bluetooth_input(char* buffer,char* message){
+
     bool seEnvioAlgo = false;
     int indiceBuffer = 0;
     long int t0 = millis();
     long int t1 = millis();
-    limpiarBuffer();
-	enviarConfirmar(message);
+    //limpiarBuffer();
+	//enviarConfirmar(message);
     while(true){
         while (Serial.available()) {
             seEnvioAlgo = true;
@@ -564,23 +597,6 @@ void borrarEEPROM() {
         EEPROM.write(i, 0);
 }
 
-enum estados {
-  MENU,
-  REGISTRO,
-  ESPERANDO,
-  LOGIN,
-  LOGS,
-  APLICACION,
-  SESION,
-  SESIONADMIN,
-  PANEL
-} siguiente_estado,
-  estado_actual = MENU;
-byte opcion_menu = 0;
-char nombre_temp[13];
-char contra_temp[13];
-char numero_temp[9] ;
-
 char leerTecla() {
   for (int i = 8; i <= 10; i++) {
     digitalWrite(i, HIGH);
@@ -596,6 +612,23 @@ char leerTecla() {
 }
 
 INICIALIZAR_TECLADO;
+
+void mensaje_inicial(){
+    pantalla.clear();
+    pantalla.setCursor(0, 0);
+    pantalla.println("Ruben 202111835");
+    pantalla.setCursor(0, 1);
+    pantalla.println("Sergio 202111835");
+    pantalla.setCursor(0, 2);
+    pantalla.println("Pedro 202111835");
+    pantalla.setCursor(0, 3);
+    pantalla.println("Jose 201901756");
+    delay(500);
+    pantalla.clear();
+    pantalla.setCursor(0, 0);
+    pantalla.println("Sebas 202111835");
+    delay(500);
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -614,20 +647,7 @@ void setup() {
     pinMode(i, OUTPUT);
   }
   // mensaje inicial
-  pantalla.setCursor(0, 0);
-  pantalla.println("Ruben 202111835");
-  pantalla.setCursor(0, 1);
-  pantalla.println("Sergio 202111835");
-  pantalla.setCursor(0, 2);
-  pantalla.println("Pedro 202111835");
-  pantalla.setCursor(0, 3);
-  pantalla.println("Jose 201901756");
-  delay(500);
-  pantalla.clear();
-  pantalla.setCursor(0, 0);
-  pantalla.println("Sebas 202111835");
-  delay(500);
-  
+     mensaje_inicial();
   /*
   //borrarEEPROM();
 
@@ -648,18 +668,11 @@ void setup() {
 
     EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
     agregar_usuario("admin1","1234","1234"); 
-    pruebaInput();
-    //pedir_password_kb();
     /*
-    agregar_usuario("xxxx2","1234","1234"); 
-    agregar_usuario("a1312n3","1234","1234"); 
-    agregar_usuario("asda4","1234","1234"); 
-    eliminar_cuenta("xxxx2");
-    agregar_usuario("a1312n3","1234","1234"); 
-    agregar_usuario("asda4","1234","1234"); 
-    agregar_usuario("ping","1234","1234"); 
-    agregar_usuario("ping","1234","1234"); 
-    */
+    agregar_usuario("a","2","2"); 
+    agregar_usuario("b","1","1"); 
+    iniciar_sesion("b","1");
+    pedir_password();*/
 
 }
 
