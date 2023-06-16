@@ -14,7 +14,6 @@ char teclas[4][3] = { { '1', '2', '3' },
 #define INICIALIZAR_TECLADO char tecla = ' '
 #define LOOP while(true)
 #define LINEA_VACIA "                "
-#define OFFSET_USUARIOS 1
 char letras[] = "ABCDEFGHIJKL";
 
 LiquidCrystal pantalla = LiquidCrystal(22, 23, 24, 25, 26, 27);
@@ -36,6 +35,12 @@ byte opcion_menu = 0;
 char nombre_temp[13];
 char contra_temp[13];
 char numero_temp[9] ;
+
+
+typedef struct{
+    uint8_t id; // de 0 a 99
+    char    desc[15];  // descripición del log
+}evento;
 
 /************************************************************ 
 *                 ACCIONES DE USUARIO                        *
@@ -66,10 +71,8 @@ typedef enum{
 
 input_type tipoEntrada;
 
-#define MAX_USER_N 10
-
-#define EEPROM_USERS_START 0
-#define EEPROM_LOGS_START sizeof(struct usuario)*MAX_USER_N
+#define EEPROM_USERS_START sizeof(phone_deposit)
+#define EEPROM_LOGS_START EEPROM.length() - 100*sizeof(evento)
 
 #define LLAVE1 'x'
 #define LLAVE2 'y'
@@ -92,6 +95,7 @@ bool pedir_password();
 char* xor_encode(char* input);
 char* xor_decode(char* input);
 void tipo_de_input();
+bool check_deposit();
 
 const phone default_phone = { .available = true} ;
 phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
@@ -246,10 +250,10 @@ bool eliminar_cuenta(char* user){
     uint16_t pos;
     struct usuario load;
     char* enc_usr = xor_encode(user);
-    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+    for(pos = EEPROM_USERS_START; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
         EEPROM.get(pos,load);
         if(strcmp(load.nombre,enc_usr) == 0){
-            for(uint8_t pos_user=0; pos_user < sizeof(struct usuario); pos_user++){
+            for(uint8_t pos_user=0; pos_user < sizeof(struct usuario)-1; pos_user++){
                 EEPROM.put(pos+pos_user,'\0');
             }
             Serial.println("Usuario Borrado");
@@ -267,7 +271,7 @@ bool validar_credenciales(char* user, char* pass){
     struct usuario load;
     char* enc_usr = xor_encode(user);
     char* enc_pass = xor_encode(pass);
-    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+    for(pos = EEPROM_USERS_START; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
         EEPROM.get(pos,load);
         if(strcmp(load.nombre,enc_usr) == 0 && strcmp(load.contra,enc_pass) == 0){
             free(enc_usr);
@@ -388,7 +392,7 @@ bool agregar_usuario(char* username, char* password, char* phone_number){
     char* enc_pass = xor_encode(password);
     uint16_t pos;
     struct usuario load;
-    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+    for(pos = EEPROM_USERS_START ; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
         EEPROM.get(pos,load);
         if(EEPROM.read(pos) == '\0'){
             break;
@@ -427,7 +431,7 @@ bool find_user(char* user){
     uint16_t pos;
     struct usuario load;
     char* enc_usr = xor_encode(user);
-    for(pos = 0; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
+    for(pos = EEPROM_USERS_START ; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
         EEPROM.get(pos,load);
         if(strcmp(load.nombre,enc_usr) == 0 ){
             free(enc_usr);
@@ -483,6 +487,9 @@ bool pedir_password(){
     return true;
 }
 
+/*
+* Función unicamente para hacer pruebas sin tener que pasar por menues xd
+*/
 boolean iniciar_sesion(char* user, char* pass){
     if (validar_credenciales(user,pass)){
         strncpy(nombre_temp,user,12);
@@ -641,6 +648,16 @@ bool bluetooth_input(char* buffer,char* message){
     }
 }
 
+bool check_deposit(char type, uint8_t position){
+    char c_pos = position + '0';
+    char msg[2] = { type, c_pos }; 
+    char rsp[2];
+    Serial3.print(msg);
+    Serial3.readBytes(rsp, 1);
+    Serial.print("->");
+    Serial.println(rsp);
+}
+
 /************************************************************* 
 **************************************************************
 *************************************************************/
@@ -686,6 +703,7 @@ void mensaje_inicial(){
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  Serial3.begin(9600); // Comunicación serial con el arduino de los sensores
   //inicializacion del driver matriz de leds
   matriz.shutdown(0, false);
   matriz.setIntensity(0, 8);
@@ -706,12 +724,20 @@ void setup() {
 
     if(!find_user("admin1")){
         Serial.println("Agregar Admin");
-        EEPROM.put(0,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
+        EEPROM.put(EEPROM_USERS_START,'\0'); // Se pone un 0 en la primera posición, para marcar que está vacía
         agregar_usuario("admin1","1234","1234"); 
     }else{
         Serial.println("Hay admin");
     }
-
+    agregar_usuario("a1312n3","1234","1234"); 
+    agregar_usuario("asda4","1234","1234"); 
+    agregar_usuario("a1312n3","1234","1234"); 
+    agregar_usuario("xxxx2","1234","1234"); 
+    agregar_usuario("a1312n3","1234","1234"); 
+    agregar_usuario("asda4","1234","1234"); 
+    agregar_usuario("ping","1234","1234"); 
+    agregar_usuario("ping","1234","1234"); 
+    agregar_usuario("lelo","1234","1234");
 }
 
 boolean entradaAceptada() {
