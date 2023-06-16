@@ -673,7 +673,7 @@ void mensaje_inicial(){
     pantalla.setCursor(0, 1);
     pantalla.println("Sergio 202111835");
     pantalla.setCursor(0, 2);
-    pantalla.println("Pedro 202111835");
+    pantalla.println("Pedro 201020600");
     pantalla.setCursor(0, 3);
     pantalla.println("Jose 201901756");
     delay(500);
@@ -950,9 +950,9 @@ void loop() {
         pantalla.setCursor(0, 0);
         pantalla.print("Presiona aceptar");
         pantalla.setCursor(0, 1);
-        pantalla.print("  Accion ADMIN");
+        pantalla.print("  Visualizacion de logs");
         pantalla.setCursor(0, 2);
-        pantalla.print("  Accion ADMIN2");
+        pantalla.print("  Verificacion del estado del sistema");
         pantalla.setCursor(0, 3);
         pantalla.print("  Cerrar sesion");
         pantalla.setCursor(0, opcion_menu + 1);
