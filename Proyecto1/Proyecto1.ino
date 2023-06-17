@@ -49,7 +49,6 @@ typedef struct{
 typedef struct{
     bool available;
     char user[13];
-    char phone_number[9];
 }phone;
 
 typedef phone phone_deposit[9];
@@ -72,7 +71,7 @@ typedef enum{
 
 input_type tipoEntrada;
 
-#define EEPROM_USERS_START sizeof(phone_deposit)
+#define EEPROM_USERS_START sizeof(phone_deposit) + 1
 #define EEPROM_LOGS_START EEPROM.length() - 100*sizeof(evento)
 
 #define LLAVE1 'x'
@@ -84,9 +83,10 @@ input_type tipoEntrada;
 #define KEYBOARD_DELAY 100
 
 
-void ingresar_telefono(char* user, char* phone_number);
+void ingresar_telefono(char* user);
 void retirar_telefono(char* user);
 void update_deposit(uint8_t pos, operation op);
+void calcular_casillero_pos(uint8_t pos,uint8_t* x_left, uint8_t* y_top);
 bool agregar_usuario(char* username, char* password, char* phone_number);
 bool eliminar_cuenta(char* user);
 bool validar_credenciales(char* user, char* pass);
@@ -96,10 +96,10 @@ bool pedir_password();
 char* xor_encode(char* input);
 char* xor_decode(char* input);
 void tipo_de_input();
-bool check_deposit();
+bool check_deposit(char type, uint8_t position);
 
-const phone default_phone = { .available = true} ;
-phone_deposit casillero = {default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone};
+const phone default_phone = { .available = true, .user = {'\0'}} ;
+phone_deposit casillero = { default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone,default_phone };
 
 uint8_t led_casillero[8][8] = {
     SEP,
@@ -148,7 +148,7 @@ void tipo_de_input(){
     pantalla.clear();
 }
 
-void ingresar_telefono(char* user, char* phone_number){
+void ingresar_telefono(char* user){
     //realizar comprobacion de las condciones del casillero 
     for(int space = 0; space<9; space++){
         pantalla.clear();
@@ -167,7 +167,6 @@ void ingresar_telefono(char* user, char* phone_number){
             if(!pedir_password()){return;} 
             casillero[space].available = false;
             strncpy(casillero[space].user,user,12);
-            strncpy(casillero[space].phone_number,phone_number,8); 
             update_deposit(space,DEPOSIT);
             break;
         } 
@@ -218,7 +217,21 @@ void retirar_telefono(char* user){
         selected = index;
 
     }
+
     if(!pedir_password()){return;} 
+
+    pantalla.clear();
+    pantalla.setCursor(0,0);
+    pantalla.println("Retire CEL en");
+    pantalla.setCursor(0,1);
+    pantalla.print(" POS #");
+    char pos  = selected + '0';
+    pantalla.print(pos);
+    while(true){
+        if(check_deposit('B',selected) ){ // el botón *no está* presionado
+            break;
+        }
+    }
     char sacado = selected + '0';
     casillero[selected] = default_phone;
     update_deposit(selected,REMOVE);
@@ -301,45 +314,7 @@ bool validar_credenciales(char* user, char* pass){
 */ 
 void update_deposit(uint8_t pos, operation op){
     uint8_t x_left,y_top;
-    switch(pos){
-        case 0:
-            x_left = 0;
-            y_top = 0;
-            break;
-        case 1:
-            x_left = 3;
-            y_top = 0;
-            break;
-        case 2:
-            x_left = 6;
-            y_top = 0;
-            break;
-        case 3:
-            x_left = 0;
-            y_top = 3;
-            break;
-        case 4: 
-            x_left = 3;
-            y_top = 3;
-            break;
-        case 5:
-            x_left = 6;
-            y_top = 3;
-            break;
-        case 6:
-            x_left = 0;
-            y_top = 6;
-            break;
-        case 7:
-            x_left = 3;
-            y_top = 6;
-            break;
-        case 8:
-            x_left = 6;
-            y_top = 6;
-            break;
-    }
-
+    calcular_casillero_pos(pos,&x_left,&y_top);
     if( op == DEPOSIT ){
         led_casillero[y_top][x_left]    = 1;
         led_casillero[y_top+1][x_left]  = 1;
@@ -354,6 +329,64 @@ void update_deposit(uint8_t pos, operation op){
 
     // dibujar la matriz
     render_casillero();
+    
+    // Guardar estado en la EEPROM
+    EEPROM.put(0,'\0');
+    EEPROM.put(1,casillero);
+}
+
+void calcular_casillero_pos(uint8_t pos,uint8_t* x_left, uint8_t* y_top){
+    switch(pos){
+        case 0:
+            *x_left = 0;
+            *y_top = 0;
+            break;
+        case 1:
+            *x_left = 3;
+            *y_top = 0;
+            break;
+        case 2:
+            *x_left = 6;
+            *y_top = 0;
+            break;
+        case 3:
+            *x_left = 0;
+            *y_top = 3;
+            break;
+        case 4: 
+            *x_left = 3;
+            *y_top = 3;
+            break;
+        case 5:
+            *x_left = 6;
+            *y_top = 3;
+            break;
+        case 6:
+            *x_left = 0;
+            *y_top = 6;
+            break;
+        case 7:
+           *x_left = 3;
+           *y_top = 6;
+            break;
+        case 8:
+            *x_left = 6;
+            *y_top = 6;
+            break;
+    }
+}
+
+void fill_casillero(){
+    for(uint8_t space = 0 ; space<9 ; space++){ 
+        if( casillero[space].available == false ){
+            uint8_t x_left,y_top;
+            calcular_casillero_pos(space,&x_left,&y_top);
+            led_casillero[y_top][x_left]    = 1;
+            led_casillero[y_top+1][x_left]  = 1;
+            led_casillero[y_top][x_left+1]  = 1;
+            led_casillero[y_top+1][x_left+1]  = 1;
+        }
+    }
 }
 
 /*
@@ -735,7 +768,6 @@ void setup() {
     // mensaje inicial
     mensaje_inicial();
 
-    render_casillero();
 
     if(!find_user("admin1")){
         Serial.println("Agregar Admin");
@@ -745,11 +777,18 @@ void setup() {
         Serial.println("Hay admin");
     }
 
+    if(EEPROM.read(0) == '\0'){ // Existe casillero
+        EEPROM.get(1,casillero);
+        Serial.println(casillero[0].user);
+        Serial.println(casillero[0].available);
+        fill_casillero();
+    }
+    render_casillero();
     /* //Para no pasar por menus xd 
     agregar_usuario("a","1","1");
-    iniciar_sesion("a","1");
-    estado_actual = SESION;
-    */
+    agregar_usuario("b","1","1");
+    iniciar_sesion("b","1");
+    estado_actual = SESION;*/
 }
 
 boolean entradaAceptada() {
@@ -1067,7 +1106,7 @@ void loop() {
             case 0:
                 //estado_actual = ESPERANDO;
                 //siguiente_estado = APLICACION;
-                ingresar_telefono(nombre_temp,""); 
+                ingresar_telefono(nombre_temp); 
                 break;
             case 1:
                 //estado_actual = ESPERANDO;
