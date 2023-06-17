@@ -22,6 +22,7 @@ LedControl matriz = LedControl(28, 30, 29, 1);
 enum estados {
   MENU,
   REGISTRO,
+  REGISTRO2,
   ESPERANDO,
   LOGIN,
   LOGS,
@@ -833,8 +834,8 @@ void loop() {
             delay(210);
             switch (opcion_menu) {
               case 0:
-                estado_actual = ESPERANDO;
-                siguiente_estado = LOGIN;
+                //estado_actual = ESPERANDO;
+                estado_actual = REGISTRO2;
                 //estado_actual = LOGIN;
                 break;
               case 1:
@@ -1093,6 +1094,58 @@ void loop() {
         }
         break;
     }
+    case REGISTRO2:
+      {
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.print("Presiona aceptar");
+        pantalla.setCursor(0, 1);
+        pantalla.print("  Aplicacion");
+        pantalla.setCursor(0, 2);
+        pantalla.print("  Panel");
+        pantalla.setCursor(0, 3);
+        pantalla.print("  Salir");
+        pantalla.setCursor(0, opcion_menu + 1);
+        pantalla.print(">");
+        while (true) { //loop que mueve el cursor o detecta el boton aceptar
+          char tecla = leerTecla();
+          if (tecla == '2') {
+            delay(210);
+            opcion_menu--;
+            if (opcion_menu > 254) opcion_menu = 0;  //254 porque la variable es byte xd
+            break;
+          }
+          if (tecla == '8') {
+            delay(210);
+            opcion_menu++;
+            if (opcion_menu > 2) opcion_menu = 2;
+            break;
+          }
+          if (digitalRead(2) == HIGH) {  //boton aceptar
+            delay(210);
+            switch (opcion_menu) {
+              case 0:
+                estado_actual = ESPERANDO;
+                siguiente_estado = LOGIN;
+                
+                break;
+              case 1:
+                //estado_actual = ESPERANDO;
+                //siguiente_estado = REGISTRO;
+                estado_actual = PANEL;
+                break;
+              case 2:
+                //estado_actual = ESPERANDO;
+                //siguiente_estado = REGISTRO;
+                estado_actual = MENU;
+                break;
+            }
+            opcion_menu = 0;
+            break;
+          }
+        }
+        break;
+      }
     case REGISTRO:
       {
         pantalla.clear();
