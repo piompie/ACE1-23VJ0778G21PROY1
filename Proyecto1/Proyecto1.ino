@@ -1094,6 +1094,50 @@ void loop() {
         }
         break;
     }
+    case PANEL:
+    {
+      pantalla.clear();
+      pantalla.setCursor(0, 0);
+      pantalla.print("Login");
+      pantalla.setCursor(0, 1);
+      pantalla.print(" - NOMBRE:");
+      char buffer[16] = {0};
+
+      if(keyboard_input(buffer, 2)){
+        delay(1000);
+        pantalla.clear();
+        pantalla.print("SIUUUU");
+        delay(1000);
+        pantalla.clear();
+        //estado_actual=MENU;
+      }
+
+      pantalla.clear();
+      pantalla.setCursor(0, 0);
+      pantalla.print("Login");
+      pantalla.setCursor(0, 1);
+      pantalla.print(" - CONTRA:");
+      char buffer2[16] = {0};
+
+      if(keyboard_input(buffer2, 2)){
+        delay(1000);
+        pantalla.clear();
+        pantalla.print(buffer);
+        pantalla.print(buffer2);
+        delay(1000);
+        pantalla.clear();
+        estado_actual=SESION;
+      }
+      
+      break;
+      
+
+      
+
+
+    }
+
+
     case REGISTRO2:
       {
         pantalla.clear();
