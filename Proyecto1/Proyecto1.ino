@@ -199,7 +199,7 @@ void ingresar_telefono(char* user){
             pantalla.print(" POS #");
             pantalla.print(pos);
             while(true){
-                if(!check_deposit('T',space) ){ // el botón *no está* presionado
+                if(!check_deposit('T',space) ){ // no hay una gran temperatura 
                     break;
                 }
             }
@@ -800,6 +800,7 @@ void check_casillero(){
                 char temp_log[]= "MUCHO CALOR # ";
                 temp_log[strlen(temp_log)-1] = sp;
                 update_stats(INCIDENTES,1);
+                Serial.println(temp_log);
                 log_EEPROM(temp_log);
             }
         }
@@ -812,8 +813,6 @@ void check_casillero(){
 /*************************************************************/
 
 void log_EEPROM(char* description){
-    Serial.print("----->");
-    Serial.println(description);
     uint8_t id_counter = 0;
     for(uint16_t pos = EEPROM_LOGS_START; pos < EEPROM.length() ; pos+=sizeof(evento) ){
         uint8_t load;
@@ -979,13 +978,12 @@ void setup() {
     fill_casillero();
   }
   render_casillero();
-
-    
-    //Para no pasar por menus xd 
-    //agregar_usuario("A","1","1");
+ 
     //agregar_usuario("B","1","1");
     //iniciar_sesion("B","1");
     //estado_actual =SESION;
+    //Para no pasar por menus xd 
+    //agregar_usuario("A","1","1");
     //estado_actual = SESIONADMIN;
 }
 
@@ -1048,6 +1046,7 @@ void loop() {
     case MENU:
       {
         //Serial.println("MENU");
+        check_casillero();
         pantalla.clear();
         pantalla.setCursor(0, 0);
         pantalla.print("Menu principal");
@@ -1275,6 +1274,7 @@ void loop() {
       }
     case SESIONADMIN:
       {
+        check_casillero();
         pantalla.clear();
         pantalla.setCursor(0, 0);
         pantalla.print("Presiona aceptar");
@@ -1327,6 +1327,7 @@ void loop() {
       }
     case SESION:
       {
+        check_casillero();
         pantalla.clear();
         pantalla.setCursor(0, 0);
         pantalla.print(" Ingreso Cel");
