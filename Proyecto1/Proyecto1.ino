@@ -568,10 +568,9 @@ bool pedir_password(){
             if(input){ break; }
         }
     }
-    update_stats(INT_FALLIDOS,1);
     cred = validar_credenciales(nombre_temp,buffer);
     if(!cred){
-        // si falla 2 veces se bloquea 10 segundos y retorna al mensaje inicial 
+        // si falla 2 veces se bloquea 10 segundos y retorna al mensaje inicia 
         estado_actual = MENU;
         for(uint8_t i= 10 ;i > 0; i--  ){
             pantalla.clear();
@@ -977,8 +976,6 @@ void setup() {
 
   if (EEPROM.read(0) == '\0') {  // Existe casillero
     EEPROM.get(1, casillero);
-    Serial.println(casillero[0].user);
-    Serial.println(casillero[0].available);
     fill_casillero();
   }
   render_casillero();
@@ -989,7 +986,7 @@ void setup() {
     //agregar_usuario("B","1","1");
     //iniciar_sesion("B","1");
     //estado_actual =SESION;
-    estado_actual = SESIONADMIN;
+    //estado_actual = SESIONADMIN;
 }
 
 boolean entradaAceptada() {
@@ -1269,6 +1266,7 @@ void loop() {
           delay(50);
           estado_actual = MENU;
           agregarlogs("loginFA");
+          update_stats(INT_FALLIDOS,1);
         }
 
         delay(2000);
