@@ -813,6 +813,8 @@ void check_casillero(){
 /*************************************************************/
 
 void log_EEPROM(char* description){
+    Serial.print("----->");
+    Serial.println(description);
     uint8_t id_counter = 0;
     for(uint16_t pos = EEPROM_LOGS_START; pos < EEPROM.length() ; pos+=sizeof(evento) ){
         uint8_t load;
@@ -837,10 +839,12 @@ void get_log(uint8_t index, char* buffer){
 }
 
 void show_logs(){
+    Serial.println("aaa");
     pantalla.clear();
     uint8_t inner_counter;
     char buffer[16] = {0};
     for(uint8_t i = 0; i<100; i++){
+        Serial.println(i);
         if(inner_counter > 3 ){
             while(true){
                 if(digitalRead(2) == HIGH){ delay(KEYBOARD_DELAY); pantalla.clear(); inner_counter = 0; break; }
@@ -877,6 +881,25 @@ void update_stats(adm_stat type, int step){
     }
 
     EEPROM.put(ADMIN_STATS_START+1,adm_stats);
+}
+
+void show_stats(){
+    pantalla.clear();
+    pantalla.setCursor(0,0);
+    pantalla.print("CEL #      ");
+    pantalla.print(adm_stats.celulares);
+    pantalla.setCursor(0,1);
+    pantalla.print("FAILED #   ");
+    pantalla.print(adm_stats.fallidos);
+    pantalla.setCursor(0,2);
+    pantalla.print("INCIDENT # ");
+    pantalla.print(adm_stats.incidentes);
+    pantalla.setCursor(0,3);
+    pantalla.print("ACT USER # ");
+    pantalla.print(adm_stats.usuarios);
+    while(true){
+        if(digitalRead(3) == HIGH){ delay(KEYBOARD_DELAY); return; }
+    }
 }
 /************************************************************* 
 **************************************************************
@@ -923,6 +946,8 @@ void mensaje_inicial() {
 void setup() {
   // put your setup code here, to run once:
   Serial2.begin(9600);
+  // put your setup code here, to run once:
+  Serial2.begin(9600);
   Serial.begin(9600);
   Serial3.begin(9600);  // Comunicación serial con el arduino de los sensores
   //inicializacion del driver matriz de leds
@@ -945,7 +970,6 @@ void setup() {
   if (!find_user("admin1")) {
     Serial.println("Agregar Admin");
     EEPROM.put(EEPROM_USERS_START, '\0');  // Se pone un 0 en la primera posición, para marcar que está vacía
-    EEPROM.put(EEPROM_LOGS_START, 0);
     agregar_usuario("admin1", "1234", "1234");
   } else {
     Serial.println("Hay admin");
@@ -958,11 +982,14 @@ void setup() {
     fill_casillero();
   }
   render_casillero();
-  /* //Para no pasar por menus xd 
-    agregar_usuario("a","1","1");
-    agregar_usuario("b","1","1");
-    iniciar_sesion("b","1");
-    estado_actual = SESION;*/
+
+    
+    //Para no pasar por menus xd 
+    //agregar_usuario("A","1","1");
+    //agregar_usuario("B","1","1");
+    //iniciar_sesion("B","1");
+    //estado_actual =SESION;
+    estado_actual = SESIONADMIN;
 }
 
 boolean entradaAceptada() {
@@ -1256,7 +1283,7 @@ void loop() {
         pantalla.setCursor(0, 1);
         pantalla.print("  Logs");
         pantalla.setCursor(0, 2);
-        pantalla.print("  Accion ADMIN2");
+        pantalla.print("  Estado Sys");
         pantalla.setCursor(0, 3);
         pantalla.print("  Cerrar sesion");
         pantalla.setCursor(0, opcion_menu + 1);
@@ -1285,7 +1312,7 @@ void loop() {
               case 1:
                 //estado_actual = ESPERANDO;
                 //siguiente_estado = REGISTRO;
-
+                show_stats();
                 break;
               case 2:
                 //estado_actual = ESPERANDO;
