@@ -305,7 +305,7 @@ void render_casillero(){
 
 bool eliminar_cuenta(char* user){
     if(!find_user(user)){
-        Serial.println("El usuario no existe");
+        Serial2.println("El usuario no existe");
         return false;
     }
     for(int space = 0; space<9; space++){
@@ -332,7 +332,7 @@ bool eliminar_cuenta(char* user){
             for(uint8_t pos_user=0; pos_user < sizeof(struct usuario)-1; pos_user++){
                 EEPROM.put(pos+pos_user,'\0');
             }
-            Serial.println("Usuario Borrado");
+            Serial2.println("Usuario Borrado");
             free(enc_usr);
             
             log_EEPROM("RMV USR");
@@ -483,7 +483,7 @@ char* xor_decode(char* input){
 */
 bool agregar_usuario(char* username, char* password, char* phone_number){
     if(find_user(username)){
-        Serial.println("El usuario ya existe");
+        Serial2.println("El usuario ya existe");
         return false;
     }
     struct usuario new_user;
@@ -510,14 +510,14 @@ bool agregar_usuario(char* username, char* password, char* phone_number){
         // sólo si no hay otro registro de usuario o si está en la última posición
         EEPROM.put(pos+sizeof(struct usuario),'\0');
     }
-    Serial.println("---Nuevo usuario---");
-    Serial.print(enc_usr);
-    Serial.print(" ");
-    Serial.print(enc_pass);
-    Serial.print(" ");
-    Serial.print(phone_number);
-    Serial.println("");
-    Serial.println("-------------------");
+    Serial2.println("---Nuevo usuario---");
+    Serial2.print(enc_usr);
+    Serial2.print(" ");
+    Serial2.print(enc_pass);
+    Serial2.print(" ");
+    Serial2.print(phone_number);
+    Serial2.println("");
+    Serial2.println("-------------------");
     free(enc_usr);
     free(enc_pass);
     update_stats(N_USUARIOS,1);
@@ -557,7 +557,7 @@ bool pedir_password(){
         if (tipoEntrada == APP_INPUT){input = bluetooth_input(buffer,"password");}
         if(input){ break; }
     }
-    Serial.println(buffer);
+    Serial2.println(buffer);
     pantalla.clear();
     bool cred = validar_credenciales(nombre_temp,buffer);
     if(!cred){
@@ -606,7 +606,7 @@ void update_session_time(){
 
 bool check_session_time(){
     if(millis() - current_session_time > MAX_SESSION_TIME){
-        Serial.println("SE ACABO EL TIEMPO");
+        Serial2.println("SE ACABO EL TIEMPO");
         estado_actual = MENU;
         return false;
     }
@@ -681,14 +681,14 @@ bool keyboard_input(char* buffer,uint8_t line){
             default:
 
                 if (digitalRead(2) == HIGH) { // botón aceptar 
-                    Serial.println("aceptar");
+                    Serial2.println("aceptar");
                     delay(KEYBOARD_DELAY);
                     update_session_time();
                     return true;
                 }
 
                 if(digitalRead(3) == HIGH){ // botón cancelar
-                    Serial.println("cancelar");
+                    Serial2.println("cancelar");
                     for(uint8_t i = 0; buffer[i]!='\0';i++){buffer[i]='\0';}
                     delay(KEYBOARD_DELAY);
                     update_session_time();
@@ -711,7 +711,7 @@ bool keyboard_input(char* buffer,uint8_t line){
         }
         buffer[buffer_index] = teclado_matricial[key_index][key_pos];
         pantalla.println(buffer);
-        Serial.println(buffer);
+        Serial2.println(buffer);
     }
     return false;
 }
@@ -795,7 +795,7 @@ void check_casillero(){
             if(check_butt){
                 char butt_log[15]= "NO HAY CEL # ";
                 butt_log[strlen(butt_log)-1] = sp;
-                Serial.println(butt_log);
+                Serial2.println(butt_log);
                 update_stats(INCIDENTES,1);
                 log_EEPROM(butt_log);
             }
@@ -803,7 +803,7 @@ void check_casillero(){
                 char temp_log[]= "MUCHO CALOR # ";
                 temp_log[strlen(temp_log)-1] = sp;
                 update_stats(INCIDENTES,1);
-                Serial.println(temp_log);
+                Serial2.println(temp_log);
                 log_EEPROM(temp_log);
             }
         }
@@ -840,12 +840,10 @@ void get_log(uint8_t index, char* buffer){
 }
 
 void show_logs(){
-    Serial.println("aaa");
     pantalla.clear();
     uint8_t inner_counter;
     char buffer[16] = {0};
     for(uint8_t i = 0; i<100; i++){
-        Serial.println(i);
         if(inner_counter > 3 ){
             while(true){
                 if(digitalRead(2) == HIGH){ delay(KEYBOARD_DELAY); pantalla.clear(); inner_counter = 0; break; }
@@ -969,11 +967,11 @@ void setup() {
 
 
   if (!find_user(ADMIN_NAME)) {
-    Serial.println("Agregar Admin");
+    Serial2.println("Agregar Admin");
     EEPROM.put(EEPROM_USERS_START, '\0');  // Se pone un 0 en la primera posición, para marcar que está vacía
     agregar_usuario(ADMIN_NAME, ADMIN_PASS, "0");
   } else {
-    Serial.println("Hay admin");
+    Serial2.println("Hay admin");
   }
 
   if (EEPROM.read(0) == '\0') {  // Existe casillero
