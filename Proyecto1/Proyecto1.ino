@@ -86,7 +86,7 @@ input_type tipoEntrada;
 #define EEPROM_LOGS_START EEPROM.length() - 100*sizeof(evento)
 
 #define LLAVE1 '5'
-#define LLAVE2 '3'
+#define LLAVE2 '0'
 #define ADMIN_NAME "ADMIN*05645"
 #define ADMIN_PASS "GRUPO21"
 
@@ -489,6 +489,7 @@ bool agregar_usuario(char* username, char* password, char* phone_number){
     struct usuario new_user;
     char* enc_usr = xor_encode(username);
     char* enc_pass = xor_encode(password);
+    char* enc_number = xor_encode(enc_number);
     uint16_t pos;
     struct usuario load;
     for(pos = EEPROM_USERS_START ; pos < EEPROM_LOGS_START ; pos+=sizeof(struct usuario) ){
@@ -500,7 +501,7 @@ bool agregar_usuario(char* username, char* password, char* phone_number){
 
     strncpy(new_user.nombre,enc_usr,13);
     strncpy(new_user.contra,enc_pass,13);
-    strncpy(new_user.numero,phone_number,9);
+    strncpy(new_user.numero,enc_number,9);
     EEPROM.put(pos,new_user);
 
     struct usuario check;
@@ -515,7 +516,7 @@ bool agregar_usuario(char* username, char* password, char* phone_number){
     Serial2.print(" ");
     Serial2.print(enc_pass);
     Serial2.print(" ");
-    Serial2.print(phone_number);
+    Serial2.print(enc_number);
     Serial2.println("");
     Serial2.println("-------------------");
     free(enc_usr);
