@@ -30,9 +30,9 @@ enum estados {
 } siguiente_estado,
   estado_actual = MENU;
 byte opcion_menu = 0;
-char nombre_temp[13];
-char contra_temp[13];
-char numero_temp[9] ;
+char nombre_temp[16];
+char contra_temp[16];
+char numero_temp[16];
 
 
 typedef struct{
@@ -1696,6 +1696,17 @@ void loop() {
         memset(numero_temp, 0, 9);
         struct usuario nuevo_usuario;
         LOOP {
+          goto nombre_app;
+          err_nombre_app:{
+            pantalla.clear();
+            pantalla.setCursor(0, 0);
+            pantalla.print("Error");
+            pantalla.setCursor(0, 1);
+            pantalla.print("Nombre no valido");
+            for(uint8_t i = 0; nombre_temp[i]!='\0';i++){nombre_temp[i]='\0';}
+            delay(300);
+          };
+          nombre_app:
           limpiarBuffer();
           enviarConfirmar("Nombre:");
           memset(nombre_temp, 0, 13);
@@ -1730,13 +1741,29 @@ void loop() {
           pantalla.setCursor(0, 3);
           pantalla.print("Correcto?       ");
           delay(500);
-          if (entradaAceptada()) break;
+          if (entradaAceptada()){ 
+              if(!validar_nombre(nombre_temp)){
+                  goto err_nombre_app;
+              }
+              break;
+          }
           pantalla.setCursor(0, 2);
           pantalla.print(LINEA_VACIA);
           pantalla.setCursor(0, 3);
           pantalla.print(LINEA_VACIA);
         }
         LOOP {
+          goto tel_app;
+          err_tel_app:{
+            pantalla.clear();
+            pantalla.setCursor(0, 0);
+            pantalla.print("Error");
+            pantalla.setCursor(0, 1);
+            pantalla.print("Numero no valido");
+            for(uint8_t i = 0; numero_temp[i]!='\0';i++){numero_temp[i]='\0';}
+            delay(300);
+          };
+          tel_app:
           limpiarBuffer();
           enviarConfirmar("Celular:");
           memset(numero_temp, 0, 9);
@@ -1771,13 +1798,29 @@ void loop() {
           pantalla.setCursor(0, 3);
           pantalla.print("Correcto?       ");
           delay(500);
-          if (entradaAceptada()) break;
+          if (entradaAceptada()){
+            if(!validar_numero(numero_temp)){
+                goto err_tel_app;
+            }
+            break;
+          }
           pantalla.setCursor(0, 2);
           pantalla.print(LINEA_VACIA);
           pantalla.setCursor(0, 3);
           pantalla.print(LINEA_VACIA);
         }
         LOOP {
+          goto pass_app;
+          err_pass_app:{
+            pantalla.clear();
+            pantalla.setCursor(0, 0);
+            pantalla.print("Error");
+            pantalla.setCursor(0, 1);
+            pantalla.print("Numero no valido");
+            for(uint8_t i = 0; contra_temp[i]!='\0';i++){contra_temp[i]='\0';}
+            delay(300);
+          };
+          pass_app:
           limpiarBuffer();
           enviarConfirmar("Contras:");
           memset(contra_temp, 0, 13);
@@ -1812,7 +1855,12 @@ void loop() {
           pantalla.setCursor(0, 3);
           pantalla.print("Correcto?       ");
           delay(500);
-          if (entradaAceptada()) break;
+          if (entradaAceptada()){ 
+              if(!validar_contra(contra_temp)){
+                  goto err_pass_app;
+              }
+              break;
+          }
           pantalla.setCursor(0, 2);
           pantalla.print(LINEA_VACIA);
           pantalla.setCursor(0, 3);
