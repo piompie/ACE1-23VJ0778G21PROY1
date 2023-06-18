@@ -1478,13 +1478,16 @@ void loop() {
           delay(500);
           if(strcmp(nombre_temp, ADMIN_NAME) == 0 && strcmp(contra_temp, ADMIN_PASS) == 0){
             estado_actual = SESIONADMIN;
+            agregarlogs("loginAE");
           }else{
             estado_actual = SESION;
+            agregarlogs("loginUE");
           }
           
         }else{
           pantalla.clear();
           estado_actual = MENU;
+          agregarlogs("loginFA");
         }
 
 
