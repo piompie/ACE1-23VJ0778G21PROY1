@@ -25,7 +25,8 @@ enum estados {
   APLICACION,
   SESION,
   SESIONADMIN,
-  PANEL
+  PANEL,
+  RPANEL
 } siguiente_estado,
   estado_actual = MENU;
 byte opcion_menu = 0;
@@ -965,10 +966,10 @@ void setup() {
   mensaje_inicial();
 
 
-  if (!find_user("admin1")) {
+  if (!find_user("ADM1")) {
     Serial.println("Agregar Admin");
     EEPROM.put(EEPROM_USERS_START, '\0');  // Se pone un 0 en la primera posición, para marcar que está vacía
-    agregar_usuario("admin1", "1234", "1234");
+    agregar_usuario("ADM1", "1234", "1234");
   } else {
     Serial.println("Hay admin");
   }
@@ -1078,7 +1079,7 @@ void loop() {
               case 0:
                 //estado_actual = ESPERANDO;
                 //estado_actual = SESIONADMIN;
-                estado_actual = LOGIN;
+                estado_actual = REGISTRO2;
                 break;
               case 1:
                 //estado_actual = ESPERANDO;
@@ -1251,7 +1252,7 @@ void loop() {
         pantalla.clear();
 
 
-        if (strcmp(nombre_temp, "admin1") == 0 && strcmp(contra_temp, "1234") == 0) {
+        if (strcmp(nombre_temp, "ADM1") == 0 && strcmp(contra_temp, "1234") == 0) {
           pantalla.print("ADMIN");
           delay(50);
           estado_actual = SESIONADMIN;
@@ -1260,8 +1261,8 @@ void loop() {
           estado_actual = SESION;
           agregarlogs("loginUE");
         } else {
-          pantalla.print(nombre_temp);
-          pantalla.print(contra_temp);
+          //pantalla.print(nombre_temp);
+          //pantalla.print(contra_temp);
           delay(50);
           estado_actual = MENU;
           agregarlogs("loginFA");
@@ -1386,40 +1387,104 @@ void loop() {
         }
         break;
       }
+
+    case RPANEL:
+    {
+      pantalla.clear();
+      pantalla.setCursor(0, 0);
+      pantalla.print("REGISTRO");
+      pantalla.setCursor(0, 1);
+      pantalla.print(" - NOMBRE:");
+      char buffer[16] = { 0 };
+      char buffer2[16] = { 0 };
+      char buffer3[16] = { 0 };
+
+      if (keyboard_input(buffer, 2)) {
+        delay(100);
+        strcpy(nombre_temp, buffer);
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.print("REGISTRO");
+        pantalla.setCursor(0, 1);
+        pantalla.print(" - CONTRA:");
+        
+      }
+
+      
+
+      if (keyboard_input(buffer2, 2)) {
+        delay(100);
+        strcpy(contra_temp,buffer2);
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.print("REGISTRO");
+        pantalla.setCursor(0, 1);
+        pantalla.print(" - NUMERO:");
+        
+      }
+
+      if (keyboard_input(buffer3, 2)) {
+        delay(100);
+        strcpy(numero_temp,buffer2);
+        
+      }
+
+      bool usuario_creado = agregar_usuario(nombre_temp, contra_temp, numero_temp);
+      if (usuario_creado) {
+        estado_actual = MENU;
+      }
+    
+
+      break;
+
+    }
     case PANEL:
       {
         pantalla.clear();
         pantalla.setCursor(0, 0);
-        pantalla.print("Login");
+        pantalla.print("REGISTRO");
         pantalla.setCursor(0, 1);
         pantalla.print(" - NOMBRE:");
         char buffer[16] = { 0 };
-
-        if (keyboard_input(buffer, 2)) {
-          delay(1000);
-          pantalla.clear();
-          pantalla.print("SIUUUU");
-          delay(1000);
-          pantalla.clear();
-          //estado_actual=MENU;
-        }
-
-        pantalla.clear();
-        pantalla.setCursor(0, 0);
-        pantalla.print("Login");
-        pantalla.setCursor(0, 1);
-        pantalla.print(" - CONTRA:");
         char buffer2[16] = { 0 };
 
-        if (keyboard_input(buffer2, 2)) {
-          delay(1000);
+        if (keyboard_input(buffer, 2)) {
+          delay(100);
+          strcpy(nombre_temp, buffer);
           pantalla.clear();
-          pantalla.print(buffer);
-          pantalla.print(buffer2);
-          delay(1000);
-          pantalla.clear();
-          estado_actual = SESION;
+          pantalla.setCursor(0, 0);
+          pantalla.print("Login");
+          pantalla.setCursor(0, 1);
+          pantalla.print(" - CONTRA:");
+          
         }
+
+        
+
+        if (keyboard_input(buffer2, 2)) {
+          delay(100);
+          strcpy(contra_temp,buffer2);
+          
+        }
+
+        if(validar_credenciales(buffer, buffer2)){
+          //pantalla.clear();
+          //pantalla.print(nombre_temp);
+          //pantalla.print(contra_temp);
+          //delay(500);
+          pantalla.clear();
+          delay(500);
+          if(strcmp(nombre_temp, "ADM1") == 0 && strcmp(contra_temp, "1234") == 0){
+            estado_actual = SESIONADMIN;
+          }else{
+            estado_actual = SESION;
+          }
+          
+        }else{
+          pantalla.clear();
+          estado_actual = MENU;
+        }
+
 
         break;
       }
@@ -1515,7 +1580,7 @@ void loop() {
               case 1:
                 //estado_actual = ESPERANDO;
                 //siguiente_estado = REGISTRO;
-                estado_actual = PANEL;
+                estado_actual = RPANEL;
                 break;
               case 2:
                 //estado_actual = ESPERANDO;
