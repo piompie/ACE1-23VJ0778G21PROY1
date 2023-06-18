@@ -85,8 +85,10 @@ input_type tipoEntrada;
 #define EEPROM_USERS_START sizeof(phone_deposit) + 1 + sizeof(admin_stats) + 1
 #define EEPROM_LOGS_START EEPROM.length() - 100*sizeof(evento)
 
-#define LLAVE1 'x'
-#define LLAVE2 'y'
+#define LLAVE1 '5'
+#define LLAVE2 '3'
+#define ADMIN_NAME "ADMIN*05645"
+#define ADMIN_PASS "GRUPO21"
 
 #define SEP    {0,0,1,0,0,1,0,0}
 #define FLINE  {1,1,1,1,1,1,1,1}
@@ -930,15 +932,15 @@ void mensaje_inicial() {
   pantalla.setCursor(0, 0);
   pantalla.println("Ruben 202111835");
   pantalla.setCursor(0, 1);
-  pantalla.println("Sergio 202111835");
+  pantalla.println("Sergio 202100154");
   pantalla.setCursor(0, 2);
-  pantalla.println("Pedro 202111835");
+  pantalla.println("Pedro 201020600");
   pantalla.setCursor(0, 3);
   pantalla.println("Jose 201901756");
   delay(500);
   pantalla.clear();
   pantalla.setCursor(0, 0);
-  pantalla.println("Sebas 202111835");
+  pantalla.println("Sebas 201906085");
   delay(500);
 }
 
@@ -966,10 +968,10 @@ void setup() {
   mensaje_inicial();
 
 
-  if (!find_user("ADM1")) {
+  if (!find_user(ADMIN_NAME)) {
     Serial.println("Agregar Admin");
     EEPROM.put(EEPROM_USERS_START, '\0');  // Se pone un 0 en la primera posición, para marcar que está vacía
-    agregar_usuario("ADM1", "1234", "1234");
+    agregar_usuario(ADMIN_NAME, ADMIN_PASS, "0");
   } else {
     Serial.println("Hay admin");
   }
@@ -1252,7 +1254,7 @@ void loop() {
         pantalla.clear();
 
 
-        if (strcmp(nombre_temp, "ADM1") == 0 && strcmp(contra_temp, "1234") == 0) {
+        if (strcmp(nombre_temp, ADMIN_NAME) == 0 && strcmp(contra_temp, ADMIN_PASS) == 0) {
           pantalla.print("ADMIN");
           delay(50);
           estado_actual = SESIONADMIN;
@@ -1442,7 +1444,7 @@ void loop() {
       {
         pantalla.clear();
         pantalla.setCursor(0, 0);
-        pantalla.print("REGISTRO");
+        pantalla.print("LOGIN");
         pantalla.setCursor(0, 1);
         pantalla.print(" - NOMBRE:");
         char buffer[16] = { 0 };
@@ -1474,7 +1476,7 @@ void loop() {
           //delay(500);
           pantalla.clear();
           delay(500);
-          if(strcmp(nombre_temp, "ADM1") == 0 && strcmp(contra_temp, "1234") == 0){
+          if(strcmp(nombre_temp, ADMIN_NAME) == 0 && strcmp(contra_temp, ADMIN_PASS) == 0){
             estado_actual = SESIONADMIN;
           }else{
             estado_actual = SESION;
