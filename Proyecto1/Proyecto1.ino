@@ -900,6 +900,53 @@ void show_stats(){
         if(digitalRead(3) == HIGH){ delay(KEYBOARD_DELAY); return; }
     }
 }
+
+
+bool validar_numero(char* numero){
+    uint8_t len = strlen(numero);
+    if(len != 8){return false;}
+    char c;
+    for(uint8_t ci = 0;ci<len;ci++){
+        c = numero[ci];
+        if(!isdigit(c)){return false;}
+    }
+    return true;
+}
+
+bool validar_nombre(char* nombre){
+    uint8_t len = strlen(nombre);
+    if(len > 12 || len < 8){return false;}
+    char c;
+    for(uint8_t ci = 0;ci<len;ci++){
+        c = nombre[ci];
+        if(!isdigit(c) && !isalpha(c)){return false;}
+    }
+    return true;
+}
+
+bool validar_contra(char* pass){
+    uint8_t len = strlen(pass);
+    if(len > 12 || len < 8){return false;}
+    bool flag_digit = false;
+    bool flag_alpha = false;
+    bool flag_especial= false;
+    char c;
+    for(uint8_t ci = 0;ci<len;ci++){
+        c = pass[ci];
+        if(isdigit(c)){
+            flag_digit = true; 
+        }
+        if(isalpha(c)){
+            flag_alpha = true;
+        }
+        if(c == '*' || c == '#' || c == '$' || c == '!'){
+            flag_especial = true;
+        }
+    }
+    return flag_digit && flag_alpha && flag_especial;
+    
+}
+
 /************************************************************* 
 **************************************************************
 *************************************************************/
@@ -1390,42 +1437,86 @@ void loop() {
 
     case RPANEL:
     {
+
+      char buffer[16] = { 0 };
+      char buffer2[16] = { 0 };
+      char buffer3[16] = { 0 };
+        
+      goto nombre_panel;
+      err_nombre_panel:{
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.print("Error");
+        pantalla.setCursor(0, 1);
+        pantalla.print("Nombre no valido");
+        for(uint8_t i = 0; buffer[i]!='\0';i++){buffer[i]='\0';}
+        delay(300);
+      };
+
+      nombre_panel:
       pantalla.clear();
       pantalla.setCursor(0, 0);
       pantalla.print("REGISTRO");
       pantalla.setCursor(0, 1);
       pantalla.print(" - NOMBRE:");
-      char buffer[16] = { 0 };
-      char buffer2[16] = { 0 };
-      char buffer3[16] = { 0 };
 
       if (keyboard_input(buffer, 2)) {
         delay(100);
-        strcpy(nombre_temp, buffer);
-        pantalla.clear();
-        pantalla.setCursor(0, 0);
-        pantalla.print("REGISTRO");
-        pantalla.setCursor(0, 1);
-        pantalla.print(" - CONTRA:");
-        
+        if(!validar_nombre(buffer)){
+            goto err_nombre_panel;
+        }
+        strcpy(nombre_temp, buffer); 
       }
 
-      
+      goto contra_panel; 
+      err_contra_panel:{
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.print("Error");
+        pantalla.setCursor(0, 1);
+        pantalla.print("Contra no valida");
+        for(uint8_t i = 0; buffer2[i]!='\0';i++){buffer[i]='\0';}
+        delay(300);
+      };
+
+      contra_panel:
+      pantalla.clear();
+      pantalla.setCursor(0, 0);
+      pantalla.print("REGISTRO");
+      pantalla.setCursor(0, 1);
+      pantalla.print(" - CONTRA:");
 
       if (keyboard_input(buffer2, 2)) {
         delay(100);
-        strcpy(contra_temp,buffer2);
-        pantalla.clear();
-        pantalla.setCursor(0, 0);
-        pantalla.print("REGISTRO");
-        pantalla.setCursor(0, 1);
-        pantalla.print(" - NUMERO:");
-        
+        if(!validar_contra(buffer2)){
+            goto err_contra_panel;
+        }
+        strcpy(contra_temp,buffer2); 
       }
 
+      goto numero_panel;
+      err_number_panel:{
+        pantalla.clear();
+        pantalla.setCursor(0, 0);
+        pantalla.print("Error");
+        pantalla.setCursor(0, 1);
+        pantalla.print("Numero no valido");
+        for(uint8_t i = 0; buffer3[i]!='\0';i++){buffer[i]='\0';}
+        delay(300);
+      };
+
+      numero_panel:
+      pantalla.clear();
+      pantalla.setCursor(0, 0);
+      pantalla.print("REGISTRO");
+      pantalla.setCursor(0, 1);
+      pantalla.print(" - NUMERO:");
       if (keyboard_input(buffer3, 2)) {
         delay(100);
-        strcpy(numero_temp,buffer2);
+        if(!validar_numero(buffer3)){
+            goto err_number_panel;
+        }
+        strcpy(numero_temp,buffer3);
         
       }
 
