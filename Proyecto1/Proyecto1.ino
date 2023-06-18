@@ -943,7 +943,7 @@ void loop() {
 	    pantalla.clear();
 
 
-      if(strcmp(nombre_temp, "admin1") == 0 && strcmp(contra_temp, "1234") == 0){
+      if(strcmp(nombre_temp, "ADMIN*05645") == 0 && strcmp(contra_temp, "GRUPO21") == 0){
         pantalla.print("ADMIN");
         delay(50);
         estado_actual = SESIONADMIN;
